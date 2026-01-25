@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import "../global.css";
 import "react-native-reanimated";
 
+// eslint-disable-next-line import/no-unresolved
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // Tạm thời ẩn cảnh báo pointerEvents từ các thư viện bên thứ ba
@@ -30,8 +31,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(admin)" />
         <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
