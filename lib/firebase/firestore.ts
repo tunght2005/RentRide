@@ -5,6 +5,8 @@ import {
   getDoc,
   serverTimestamp,
   updateDoc,
+  collection,
+  addDoc,
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
 import { User } from "firebase/auth";
@@ -64,4 +66,32 @@ export async function updateUserProfile(
 export async function getUserProfile(uid: string) {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
+}
+
+// add vihicle
+export async function addVehicle(data: {
+  name: string;
+  type: string;
+  brand: string;
+  price: number;
+  description?: string;
+  mainImage?: string;
+  subImages?: string[];
+  ratingAvg?: number;
+  totalReviews?: number;
+  isAvailable: true;
+  locationId: string;
+  createAt?: any;
+  updatedAt?: any;
+}) {
+  const ref = await addDoc(collection(db, "vehicles"), {
+    ...data,
+    ratingAvg: 0,
+    totalReviews: 0,
+    isAvailable: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return ref.id;
 }
