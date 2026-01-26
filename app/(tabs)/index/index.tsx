@@ -183,7 +183,7 @@ export default function HomeScreen() {
             <View className="p-3">
               <Text className="font-bold">{v.name}</Text>
               <Text className="text-gray-500 text-sm">
-                {(v.pricePerDay ?? 0).toLocaleString()} đ / ngày
+                {(v.price ?? 0).toLocaleString()} đ / ngày
               </Text>
             </View>
           </TouchableOpacity>
@@ -196,6 +196,7 @@ export default function HomeScreen() {
       <View className="flex-row flex-wrap justify-between">
         {filteredVehicles.map((v) => (
           <TouchableOpacity
+            key={v.id}
             onPress={() =>
               router.push({
                 pathname: "/vehicle/[id]",
@@ -228,7 +229,7 @@ export default function HomeScreen() {
             <View className="p-3">
               <Text className="font-bold text-sm">{v.name}</Text>
               <Text className="text-pink-600 font-bold mt-2">
-                {Number(v.pricePerDay ?? 0).toLocaleString()} đ
+                {Number(v.price ?? 0).toLocaleString()} đ
                 <Text className="text-gray-500 font-normal"> /ngày</Text>
               </Text>
             </View>
