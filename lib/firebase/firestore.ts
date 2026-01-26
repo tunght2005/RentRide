@@ -1,13 +1,17 @@
+import { User } from "firebase/auth";
 import {
-  getFirestore,
+  collection,
   doc,
-  setDoc,
   getDoc,
+  getDocs,
+  getFirestore,
+  query,
   serverTimestamp,
+  setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
-import { User } from "firebase/auth";
 
 export const db = getFirestore(firebaseApp);
 
@@ -64,4 +68,48 @@ export async function updateUserProfile(
 export async function getUserProfile(uid: string) {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
+}
+
+// Lấy tất cả danh sách xe
+export async function getAllVehicles() {
+  const snap = await getDocs(collection(db, "vehicles"));
+
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}
+// Lấy xe id xe
+export async function getVehicleById(id: string) {
+  const ref = doc(db, "vehicles", id);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return null;
+
+  return {
+    id: snap.id,
+    ...snap.data(),
+  };
+}
+
+// Lịch sử thuê xe của user
+export async function getBookingsByUser(userId: string) {
+  const q = query(collection(db, "bookings"), where("userId", "==", userId));
+
+  const snap = await getDocs(q);
+
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}
+
+// Lịch sử thuê xe
+export async function getAllBookings() {
+  const snap = await getDocs(collection(db, "bookings"));
+
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 }
