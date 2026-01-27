@@ -5,6 +5,7 @@ export default function HomeLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="[id]" />
       <Stack.Screen name="contract" />
+      <Stack.Screen name="modal" />
     </Stack>
   );
 }

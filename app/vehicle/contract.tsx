@@ -1,3 +1,4 @@
+import { usePaymentLink } from "@/hooks/usePaymentLink";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -5,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   ScrollView,
   Text,
@@ -53,6 +55,7 @@ export default function ContractScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const { createPayment } = usePaymentLink();
 
   useEffect(() => {
     if (!params.startDate || !params.endDate) return;
@@ -127,6 +130,19 @@ export default function ContractScreen() {
       );
     } finally {
       setIsProcessingOCR(false);
+    }
+  };
+  //Thanh toán
+  const handleContinue = async () => {
+    try {
+      const paymentUrl = await createPayment({
+        amount: 500000, // tiền hợp đồng
+        orderId: `${Date.now()}`, // id hợp đồng
+      });
+
+      Linking.openURL(paymentUrl);
+    } catch (e) {
+      Alert.alert("Lỗi", "Không thể tạo thanh toán");
     }
   };
 
@@ -724,6 +740,7 @@ export default function ContractScreen() {
       {/* FOOTER BUTTON */}
       <View className="px-4 pb-6 pt-4 bg-white border-t border-gray-200">
         <TouchableOpacity
+          onPress={handleContinue}
           disabled={!isFormValid()}
           className={`py-4 rounded-2xl active:opacity-80 ${
             isFormValid() ? "bg-pink-600" : "bg-gray-300"
