@@ -18,12 +18,13 @@ export default function HomeScreen() {
   const [openCategory, setOpenCategory] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const { id } = useLocalSearchParams<{ id: string }>();
+
   // 🔹 load data từ Firestore
   useEffect(() => {
     getAllVehicles().then(setVehicles);
   }, []);
 
-  // 🔹 logic tách sang hook
+  // 🔹 logic filter từ hook
   const {
     searchText,
     setSearchText,
@@ -37,6 +38,13 @@ export default function HomeScreen() {
   } = useVehicles(vehicles);
 
   const featuredVehicles = vehicles.slice(0, 3);
+
+  // 🔹 xác định đang lọc hay không
+  const isFiltering =
+    selectedType !== null ||
+    selectedLocation !== null ||
+    maxPrice < 30000000;
+
 
   return (
     <ScrollView className="flex-1 bg-white px-4 pt-4">
@@ -69,6 +77,58 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
 
+        {/* NÚT XÓA BỘ LỌC */}
+        {isFiltering && (
+  <TouchableOpacity
+    onPress={() => {
+      setSelectedType(null);
+      setSelectedLocation(null);
+      setMaxPrice(30000000);
+    }}
+    className="mt-2 self-start bg-gray-200 px-3 py-1 rounded-full"
+  >
+    <Text className="text-sm text-gray-700 font-semibold">
+       Xóa bộ lọc
+    </Text>
+  </TouchableOpacity>
+)}
+
+
+        {/* THÔNG TIN ĐANG LỌC */}
+        {/* THÔNG TIN ĐANG LỌC */}
+{isFiltering && (
+  <View className="mt-3 flex-row flex-wrap gap-3">
+    {/* LOẠI XE */}
+    {selectedType && (
+      <View className="flex-row items-center bg-gray-100 px-4 py-2 rounded-full border border-gray-300">
+        <Text className="text-gray-700 font-semibold text-sm">
+           {selectedType}
+        </Text>
+      </View>
+    )}
+
+    {/* KHU VỰC */}
+    {selectedLocation && (
+      <View className="flex-row items-center bg-gray-100 px-4 py-2 rounded-full border border-gray-300">
+        <Text className="text-gray-700 font-semibold text-sm">
+           {selectedLocation}
+        </Text>
+      </View>
+    )}
+
+    {/* GIÁ */}
+    {maxPrice < 30000000 && (
+      <View className="flex-row items-center bg-gray-100 px-4 py-2 rounded-full border border-gray-300">
+        <Text className="text-gray-700 font-semibold text-sm">
+          ≤ {maxPrice.toLocaleString()} đ
+        </Text>
+      </View>
+    )}
+  </View>
+)}
+
+
+
         {openCategory && (
           <View className="mt-3 bg-gray-50 rounded-xl p-4 space-y-4">
             {/* LOẠI XE */}
@@ -82,33 +142,50 @@ export default function HomeScreen() {
               ].map((item) => (
                 <TouchableOpacity
                   key={item.value}
-                  className="py-2 border-b border-gray-200"
                   onPress={() =>
                     setSelectedType(
-                      selectedType === item.value ? null : item.value,
+                      selectedType === item.value ? null : item.value
                     )
                   }
+                  className={`py-2 border-b border-gray-200 ${
+                    selectedType === item.value
+                      ? "bg-pink-100 rounded-lg px-2"
+                      : ""
+                  }`}
                 >
-                  <Text className="text-gray-700">{item.label}</Text>
+                  <Text
+                    className={
+                      selectedType === item.value
+                        ? "text-pink-600 font-semibold"
+                        : "text-gray-700"
+                    }
+                  >
+                    {item.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
+
             {/* LOCATION */}
             <View>
               <Text className="font-semibold mb-2">Khu vực</Text>
 
               {[
-                { label: "📍 TP.HCM", value: "HCM" },
-                { label: "📍 Hà Nội", value: "HN" },
+                { label: " TP.HCM", value: "HCM" },
+                { label: " Hà Nội", value: "HN" },
               ].map((item) => (
                 <TouchableOpacity
                   key={item.value}
-                  className="py-2 border-b border-gray-200"
                   onPress={() =>
                     setSelectedLocation(
-                      selectedLocation === item.value ? null : item.value,
+                      selectedLocation === item.value ? null : item.value
                     )
                   }
+                  className={`py-2 border-b border-gray-200 ${
+                    selectedLocation === item.value
+                      ? "bg-pink-100 rounded-lg px-2"
+                      : ""
+                  }`}
                 >
                   <Text
                     className={
@@ -132,7 +209,7 @@ export default function HomeScreen() {
 
               <Slider
                 minimumValue={0}
-                maximumValue={3000000}
+                maximumValue={30000000}
                 step={50000}
                 value={maxPrice}
                 onValueChange={setMaxPrice}
@@ -140,31 +217,34 @@ export default function HomeScreen() {
                 maximumTrackTintColor="#e5e7eb"
                 thumbTintColor="#e11d48"
               />
-
-              <View className="flex-row justify-between mt-1">
-                <Text className="text-xs text-gray-400">0</Text>
-                <Text className="text-xs text-gray-400">3.000.000</Text>
-              </View>
             </View>
           </View>
         )}
       </View>
 
-      {/* XE NỔI BẬT */}
-      <Text className="text-lg font-bold mt-6 mb-3">Xe nổi bật ⭐</Text>
+      {/* XE NỔI BẬT (ẨN KHI ĐANG LỌC) */}
+      {!isFiltering && (
+  <>
+    <Text className="text-lg font-bold mt-6 mb-3">Xe nổi bật ⭐</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {featuredVehicles.map((v) => (
-          <TouchableOpacity
-            key={v.id}
-            className="w-[85%] h-48 bg-white rounded-3xl mr-5 mb-4 overflow-hidden border border-gray-200 shadow-md"
-            onPress={() =>
-              router.push({
-                pathname: "/vehicle/[id]",
-                params: { id: v.id },
-              })
-            }
-          >
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="pl-1"
+    >
+      {featuredVehicles.map((v) => (
+        <TouchableOpacity
+          key={v.id}
+          onPress={() =>
+            router.push({
+              pathname: "/vehicle/[id]",
+              params: { id: v.id },
+            })
+          }
+          className="w-56 bg-white rounded-2xl mr-4 overflow-hidden border border-gray-200"
+        >
+          {/* IMAGE */}
+          <View className="relative">
             <Image
               source={{
                 uri:
@@ -172,70 +252,119 @@ export default function HomeScreen() {
                     ? v.images[0]
                     : "https://via.placeholder.com/300",
               }}
-              className="w-full h-full"
-              resizeMode="contain"
+              className="w-full h-32"
+              resizeMode="cover"
             />
-            <View className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full flex-row items-center">
-              <Text className="text-yellow-500 mr-1">⭐</Text>
-              <Text className="text-sm font-semibold">{v.ratingAvg}</Text>
-            </View>
 
-            <View className="p-3">
-              <Text className="font-bold">{v.name}</Text>
-              <Text className="text-gray-500 text-sm">
-                {(v.price ?? 0).toLocaleString()} đ / ngày
+            {/* RATING */}
+            <View className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full flex-row items-center">
+          <Text className="text-yellow-500 text-xs">★</Text>
+          <Text className="text-xs font-semibold ml-1">
+            {v.ratingAvg >= 0 ? v.ratingAvg.toFixed(1) :""}
+          </Text>
+        </View>
+
+            {/* TYPE BADGE */}
+            {v.type === "xe máy" && (
+              <View className="absolute top-2 left-2 bg-pink-600 px-2 py-1 rounded-full">
+                <Text className="text-white text-xs font-semibold">
+                  Xe máy
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* INFO */}
+          <View className="p-3">
+            <Text className="font-semibold text-sm" numberOfLines={1}>
+              {v.name}
+            </Text>
+
+            <Text className="text-xs text-gray-500 mt-1">
+              {v.brand}
+            </Text>
+
+            <Text className="text-pink-600 font-bold mt-2">
+              {v.price.toLocaleString()} đ
+              <Text className="text-gray-500 font-normal text-xs">
+                /ngày
               </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  </>
+)}
+
 
       {/* TẤT CẢ XE */}
-      <Text className="text-lg font-bold mt-8 mb-4">Tất cả xe</Text>
+      {/* TẤT CẢ XE */}
+<Text className="text-lg font-bold mt-8 mb-4">Tất cả xe</Text>
 
-      <View className="flex-row flex-wrap justify-between">
-        {filteredVehicles.map((v) => (
-          <TouchableOpacity
-            key={v.id}
-            onPress={() =>
-              router.push({
-                pathname: "/vehicle/[id]",
-                params: { id: v.id },
-              })
-            }
-            className="w-[48%]
-              h-48 bg-white rounded-2xl mb-6 overflow-hidden border border-gray-200 shadow-sm"
-          >
-            <Image
-              source={{
-                uri:
-                  v.images && v.images.length > 0
-                    ? v.images[0]
-                    : "https://via.placeholder.com/300",
-              }}
-              className="w-full h-full"
-              resizeMode="contain"
-            />
+<View className="flex-row flex-wrap justify-between">
+  {filteredVehicles.map((v) => (
+    <TouchableOpacity
+      key={v.id}
+      onPress={() =>
+        router.push({
+          pathname: "/vehicle/[id]",
+          params: { id: v.id },
+        })
+      }
+      className="w-[48%] bg-white rounded-2xl mb-6 overflow-hidden border border-gray-200"
+    >
+      {/* IMAGE */}
+      <View className="relative">
+        <Image
+          source={{
+            uri:
+              v.images && v.images.length > 0
+                ? v.images[0]
+                : "https://via.placeholder.com/300",
+          }}
+          className="w-full h-48"
+          resizeMode="cover"
+  
+        />
 
-            <View className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full flex-row items-center">
-              <Text className="text-yellow-500 mr-1">⭐</Text>
-              <Text className="text-xs font-semibold">{v.ratingAvg}</Text>
-            </View>
+        {/* RATING */}
+        <View className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full flex-row items-center">
+          <Text className="text-yellow-500 text-xs">★</Text>
+          <Text className="text-xs font-semibold ml-1">
+            {v.ratingAvg >= 0 ? v.ratingAvg.toFixed(1) :""}
+          </Text>
+        </View>
 
-            <View className="absolute top-2 left-2 bg-pink-600 px-2 py-1 rounded-full">
-              <Text className="text-white text-xs">{v.type?.[0]}</Text>
-            </View>
-
-            <View className="p-3">
-              <Text className="font-bold text-sm">{v.name}</Text>
-              <Text className="text-pink-600 font-bold mt-2">
-                {Number(v.price ?? 0).toLocaleString()} đ
-                <Text className="text-gray-500 font-normal"> /ngày</Text>
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {/* TYPE BADGE */}
+        {v.type === "xe máy" && (
+          <View className="absolute top-2 left-2 bg-pink-600 px-2 py-1 rounded-full">
+            <Text className="text-white text-xs font-semibold">Xe máy</Text>
+          </View>
+        )}
       </View>
+
+      {/* INFO */}
+      <View className="p-3">
+        <Text className="font-semibold text-sm" numberOfLines={1}>
+          {v.name}
+        </Text>
+
+        <Text className="text-xs text-gray-500 mt-1">
+          {v.brand}
+        </Text>
+
+        <Text className="text-pink-600 font-bold mt-2">
+          {v.price.toLocaleString()} đ
+          <Text className="text-gray-500 font-normal text-xs">/ngày</Text>
+        </Text>
+      </View>
+    </TouchableOpacity>
+  ))}
+</View>
+
+<View className="h-6" />
+
 
       <View className="h-6" />
     </ScrollView>
