@@ -26,7 +26,7 @@ export function useVehicles(vehicles: any[]) {
         ? normalize(v.locationId) === normalize(selectedLocation)
         : true;
 
-      const price = Number(v.pricePerDay ?? 0);
+      const price = Number(v.price ?? 0);
       const matchPrice = price <= maxPrice;
 
       return matchName && matchType && matchLocation && matchPrice;

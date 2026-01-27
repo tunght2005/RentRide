@@ -4,25 +4,25 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, Text } from "react-native";
 
 export default function VehicleDetails() {
-  const { id } = useLocalSearchParams<{ id: string }>()
-  const [vehicle, setVehicle] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [vehicle, setVehicle] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return
+    if (!id) return;
 
-    getVehicleById(id).then(data => {
-      setVehicle(data)
-      setLoading(false)
-    })
-  }, [id])
+    getVehicleById(id).then((data) => {
+      setVehicle(data);
+      setLoading(false);
+    });
+  }, [id]);
 
   if (loading) {
-    return <ActivityIndicator style={{ marginTop: 40 }} />
+    return <ActivityIndicator style={{ marginTop: 40 }} />;
   }
 
   if (!vehicle) {
-    return <Text>Không tìm thấy xe</Text>
+    return <Text>Không tìm thấy xe</Text>;
   }
 
   return (
@@ -41,21 +41,19 @@ export default function VehicleDetails() {
 
       {/* PRICE */}
       <Text style={{ fontSize: 18, color: "#E53935", marginVertical: 8 }}>
-        {vehicle.pricePerDay.toLocaleString()} đ / ngày
+        {vehicle.price.toLocaleString()} đ / ngày
       </Text>
 
       {/* RATING */}
-      <Text>⭐ {vehicle.ratingAvg} ({vehicle.totalReviews} đánh giá)</Text>
+      <Text>
+        ⭐ {vehicle.ratingAvg} ({vehicle.totalReviews} đánh giá)
+      </Text>
 
       {/* TYPE */}
-      <Text style={{ marginTop: 8 }}>
-        Loại: {vehicle.type?.join(", ")}
-      </Text>
+      <Text style={{ marginTop: 8 }}>Loại: {vehicle.type?.join(", ")}</Text>
 
       {/* DESCRIPTION */}
-      <Text style={{ marginTop: 12, fontSize: 16 }}>
-        {vehicle.description}
-      </Text>
+      <Text style={{ marginTop: 12, fontSize: 16 }}>{vehicle.description}</Text>
     </ScrollView>
-  )
+  );
 }
