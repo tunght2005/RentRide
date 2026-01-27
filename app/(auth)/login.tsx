@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
 } from "react-native";
 import { useState } from "react";
 import { router } from "expo-router";
@@ -17,13 +16,13 @@ import { Input } from "../../components/common/Input";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function LoginScreen() {
-  const { loginWithGoogle, loginAdmin } = useAuth();
+  const { loginWithGoogle, loginAdmin, googleLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ LOGIC GIỮ NGUYÊN 100%
+  // LOGIC GIỮ NGUYÊN 100%
   const handleAdminLogin = async () => {
     try {
       setLoading(true);
@@ -61,13 +60,26 @@ export default function LoginScreen() {
         {/* --- 2. GOOGLE LOGIN (Custom Button đẹp hơn) --- */}
         <TouchableOpacity
           onPress={loginWithGoogle}
+          disabled={googleLoading}
           activeOpacity={0.8}
-          className="flex-row items-center justify-center bg-white border border-gray-200 py-3.5 rounded-2xl shadow-sm mb-6"
+          className={`flex-row items-center justify-center border border-gray-200 py-3.5 rounded-2xl shadow-sm mb-6 ${
+            googleLoading ? "bg-gray-100" : "bg-white"
+          }`}
         >
-          <Ionicons name="logo-google" size={20} color="#DB4437" />
-          <Text className="font-semibold text-gray-700 ml-3">
-            Tiếp tục với Google
-          </Text>
+          {googleLoading ? (
+            <>
+              <Text className="font-semibold text-gray-700">
+                Đang kết nối...
+              </Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="logo-google" size={20} color="#DB4437" />
+              <Text className="font-semibold text-gray-700 ml-3">
+                Tiếp tục với Google
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
 
         {/* --- 3. DIVIDER (Đường kẻ phân cách) --- */}

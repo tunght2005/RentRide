@@ -2,7 +2,6 @@
   "expo": {
     "name": "RentRide",
     "slug": "rentride",
-    "owner": "inodev11",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
