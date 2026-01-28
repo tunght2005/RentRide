@@ -5,11 +5,9 @@ import {
   getDoc,
   getDocs,
   getFirestore,
-  query,
   serverTimestamp,
   setDoc,
-  updateDoc,
-  where,
+  updateDoc
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
 
@@ -90,26 +88,4 @@ export async function getVehicleById(id: string) {
     id: snap.id,
     ...snap.data(),
   };
-}
-
-// Lịch sử thuê xe của user
-export async function getBookingsByUser(userId: string) {
-  const q = query(collection(db, "bookings"), where("userId", "==", userId));
-
-  const snap = await getDocs(q);
-
-  return snap.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-}
-
-// Lịch sử thuê xe
-export async function getAllBookings() {
-  const snap = await getDocs(collection(db, "bookings"));
-
-  return snap.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
 }

@@ -1,55 +1,93 @@
-import { useMemo, useState } from "react";
+import { getAuth } from "firebase/auth";
+import { useEffect, useMemo, useState } from "react";
+import { getUserProfile } from "../lib/firebase/firestore";
 
 export function useVehicles(vehicles: any[]) {
-  // 🔍 search riêng
+  // =====================
+  // 🔍 SEARCH
+  // =====================
   const [searchText, setSearchText] = useState("");
-
-  // 🎯 filters
+  const isSearching = searchText.trim().length > 0;
+  // =====================
+  // 🎯 FILTERS
+  // =====================
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [maxPrice, setMaxPrice] = useState(30000000);
 
+  // =====================
+  // 👤 USER / AVATAR
+  // =====================
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    if (currentUser) {
+      getUserProfile(currentUser.uid).then(setUser);
+    }
+  }, []);
+
+  // =====================
+  // 🧹 NORMALIZE
+  // =====================
   function normalize(text?: string) {
     return text?.toLowerCase().trim();
   }
 
-  // 🔹 chỉ tính là filtering khi có FILTER (không tính search)
+  // =====================
+  // 🔹 đang filter (KHÔNG tính search)
+  // =====================
   const isFiltering =
-    selectedType !== null ||
-    selectedLocation !== null ||
-    maxPrice < 30000000;
+    selectedType !== null || selectedLocation !== null || maxPrice < 30000000;
 
-  // 🔹 reset FILTER (không đụng search)
+  // =====================
+  // 🔹 reset filters
+  // =====================
   function resetFilters() {
     setSelectedType(null);
     setSelectedLocation(null);
     setMaxPrice(30000000);
   }
 
-  // 🔹 reset SEARCH riêng
   function resetSearch() {
     setSearchText("");
   }
+  const locations = useMemo(() => {
+    const set = new Set<string>();
 
-  // 🔹 danh sách xe sau khi lọc + search
+    vehicles.forEach((v) => {
+      if (v.locationId) {
+        set.add(v.locationId.toUpperCase());
+      }
+    });
+
+    return Array.from(set);
+  }, [vehicles]);
+
+  // =====================
+  // 🚗 FILTERED VEHICLES
+  // =====================
   const filteredVehicles = useMemo(() => {
     return vehicles.filter((v) => {
+      // 🔍 name
       const matchName =
         !searchText ||
-        v.name?.toLowerCase().includes(searchText.toLowerCase());
-
+        (normalize(v.name) ?? "").includes(normalize(searchText) ?? "");
+      // 🚘 type
       const matchType = selectedType
         ? Array.isArray(v.type)
-          ? v.type.some(
-              (t: string) => normalize(t) === normalize(selectedType)
-            )
+          ? v.type.some((t: string) => normalize(t) === normalize(selectedType))
           : normalize(v.type) === normalize(selectedType)
         : true;
 
+      // 📍 location (HCM / HN – KHÔNG phân biệt hoa thường)
       const matchLocation = selectedLocation
         ? normalize(v.locationId) === normalize(selectedLocation)
         : true;
 
+      // 💰 price
       const price = Number(v.price ?? 0);
       const matchPrice = price <= maxPrice;
 
@@ -57,13 +95,16 @@ export function useVehicles(vehicles: any[]) {
     });
   }, [vehicles, searchText, selectedType, selectedLocation, maxPrice]);
 
+  // =====================
+  // 📦 EXPORT
+  // =====================
   return {
-    // search
+    // 🔍 search
     searchText,
     setSearchText,
     resetSearch,
 
-    // filters
+    // 🎯 filters
     selectedType,
     selectedLocation,
     maxPrice,
@@ -72,7 +113,10 @@ export function useVehicles(vehicles: any[]) {
     setMaxPrice,
     resetFilters,
 
-    // computed
+    // 👤 user
+    user,
+    locations,
+    // 📦 computed
     filteredVehicles,
     isFiltering,
   };

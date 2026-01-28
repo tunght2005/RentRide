@@ -1,82 +1,176 @@
-import { useBookings } from "@/hooks/useBookings";
-import { ActivityIndicator, Image, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router"; // 1. Import router
+import React from "react";
+import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
 
-export default function BookingHome() {
-  const userId = "USER_ID_HIEN_TAI"; // lấy từ auth
+// 1. Định nghĩa kiểu dữ liệu (TypeScript)
+interface BookingItem {
+  id: number;
+  vehicleName: string;
+  startDate: string;
+  endDate: string;
+  duration: string;
+  status: string;
+  price: string;
+  image: string;
+}
 
-  const {
-    bookings,
-    loading,
-    formatDate,
-    formatCurrency,
-    getStatusText,
-    getStatusStyle,
-  } = useBookings(userId);
+// 2. Dữ liệu mẫu (Mock Data)
+const bookingHistoryData: BookingItem[] = [
+  {
+    id: 1,
+    vehicleName: "Toyota Vios 2023",
+    startDate: "20/01/2024",
+    endDate: "23/01/2024",
+    duration: "3 ngày",
+    status: "Hoàn thành",
+    price: "2.400.000 ₫",
+    image:
+      "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=200&auto=format&fit=crop",
+  },
+  {
+    id: 2,
+    vehicleName: "Honda SH 150i",
+    startDate: "01/02/2024",
+    endDate: "05/02/2024",
+    duration: "4 ngày",
+    status: "Đã thanh toán",
+    price: "1.000.000 ₫",
+    image:
+      "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=200&auto=format&fit=crop",
+  },
+  {
+    id: 3,
+    vehicleName: "Hyundai Tucson 2023",
+    startDate: "10/02/2024",
+    endDate: "12/02/2024",
+    duration: "2 ngày",
+    status: "Chờ xử lý",
+    price: "2.400.000 ₫",
+    image:
+      "https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=200&auto=format&fit=crop",
+  },
+  {
+    id: 4,
+    vehicleName: "Honda PCX 160",
+    startDate: "05/03/2024",
+    endDate: "07/03/2024",
+    duration: "2 ngày",
+    status: "Chờ xử lý",
+    price: "520.000 ₫",
+    image:
+      "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?q=80&w=200&auto=format&fit=crop",
+  },
+];
 
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator />
-      </View>
-    );
+// 3. Component con: Badge hiển thị trạng thái
+const StatusBadge = ({ status }: { status: string }) => {
+  let containerStyle = "";
+  let textStyle = "";
+
+  switch (status) {
+    case "Hoàn thành":
+      containerStyle = "bg-green-100";
+      textStyle = "text-green-600";
+      break;
+    case "Đã thanh toán":
+      containerStyle = "bg-blue-100";
+      textStyle = "text-blue-600";
+      break;
+    case "Chờ xử lý":
+      containerStyle = "bg-orange-100";
+      textStyle = "text-orange-600";
+      break;
+    default:
+      containerStyle = "bg-gray-100";
+      textStyle = "text-gray-600";
   }
 
   return (
-    <View className="flex-1 bg-white p-4">
-      <Text className="text-lg font-semibold mb-4">Lịch sử đặt xe</Text>
+    <View className={`px-2 py-1 rounded-full self-start ${containerStyle}`}>
+      <Text className={`text-xs font-medium ${textStyle}`}>{status}</Text>
+    </View>
+  );
+};
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {bookings.map((item) => {
-          const status = item.status?.[0] || "pending";
-
-          return (
-            <View
-              key={item.id}
-              className="border border-gray-200 rounded-xl mb-4 p-3"
+// 4. Component con: Từng item trong danh sách
+const BookingCard = ({ item }: { item: BookingItem }) => (
+  <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100 shadow-sm">
+    <View className="flex-row">
+      <Image
+        source={{ uri: item.image }}
+        className="w-20 h-20 rounded-lg bg-gray-200"
+        resizeMode="cover"
+      />
+      <View className="flex-1 ml-3 justify-between">
+        <View className="flex-row justify-between items-start">
+          <View className="flex-1 mr-2">
+            <Text
+              className="text-base font-bold text-gray-800"
+              numberOfLines={1}
             >
-              <View className="flex-row items-center">
-                <Image
-                  source={{
-                    uri:
-                      item.images?.[0]?.url ||
-                      "https://via.placeholder.com/150",
-                  }}
-                  className="w-14 h-14 rounded-lg mr-3"
-                />
+              {item.vehicleName}
+            </Text>
+            <Text className="text-xs text-gray-500 mt-1">
+              {item.startDate} - {item.endDate}
+            </Text>
+            <Text className="text-xs text-gray-500 mt-0.5">
+              {item.duration}
+            </Text>
+          </View>
+          <StatusBadge status={item.status} />
+        </View>
+      </View>
+    </View>
 
-                <View className="flex-1">
-                  <Text className="font-semibold">
-                    Xe: {item.vehicleId || "---"}
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    {formatDate(item.startDate)} - {formatDate(item.endDate)}
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    {item.totalDays} ngày
-                  </Text>
-                </View>
+    <View className="h-[1px] bg-gray-100 my-3" />
 
-                <View
-                  className={`px-3 py-1 rounded-full ${getStatusStyle(status)}`}
-                >
-                  <Text className="text-xs font-medium">
-                    {getStatusText(status)}
-                  </Text>
-                </View>
-              </View>
+    <View className="flex-row justify-between items-center bg-gray-50 p-2 rounded-lg">
+      <Text className="text-sm text-gray-500">Tổng tiền</Text>
+      <Text className="text-lg font-bold text-red-800">{item.price}</Text>
+    </View>
+  </View>
+);
 
-              <View className="h-px bg-gray-200 my-3" />
+// 5. Component Chính
+export default function BookingsScreen() {
+  const router = useRouter(); // 2. Khởi tạo router
 
-              <View className="flex-row justify-between">
-                <Text className="text-gray-500">Tổng tiền</Text>
-                <Text className="text-red-600 font-semibold">
-                  {formatCurrency(item.totalPrice)}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+  // Giả lập user (nếu chưa có context)
+  const user = {
+    avatar: null, // Để null để test trường hợp fallback ảnh mặc định
+  };
+
+  return (
+    <View className="flex-1 bg-gray-50">
+      {/* Header đã sửa: Dùng flex-row để căn ngang */}
+      <View className="flex-row justify-between items-center p-4 bg-white border-b border-gray-100 pt-12">
+        {/* pt-12 để tránh tai thỏ (notch) trên iPhone nếu không dùng SafeAreaView */}
+
+        <Text className="text-xl font-bold text-gray-800">Lịch sử đặt xe</Text>
+
+        <TouchableOpacity
+          onPress={() => router.push("/profile")} // 3. Điều hướng
+          className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 border border-gray-200"
+        >
+          <Image
+            source={{
+              uri:
+                user?.avatar ||
+                "https://ui-avatars.com/api/?name=User&background=random",
+            }}
+            className="w-full h-full"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Danh sách cuộn */}
+      <FlatList
+        data={bookingHistoryData}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => <BookingCard item={item} />}
+        contentContainerStyle={{ padding: 16 }}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
