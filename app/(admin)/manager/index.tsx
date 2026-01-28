@@ -1,46 +1,87 @@
-import { View, Text, FlatList, Image, TextInput, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
-const cars = [
-  {
-    id: "1",
-    name: "Mazda 3 Sport",
-    brand: "Mazda",
-    price: "950.000 đ/ngày",
-    image: "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2",
-  },
-  {
-    id: "2",
-    name: "Mercedes C200 AMG",
-    brand: "Mercedes-Benz",
-    price: "2.500.000 đ/ngày",
-    image: "https://images.unsplash.com/photo-1617814075536-8a0a6c584108",
-  },
-  {
-    id: "3",
-    name: "Lexus ES250",
-    brand: "Lexus",
-    price: "2.800.000 đ/ngày",
-    image: "https://images.unsplash.com/photo-1606611013016-b3a24f4c2a38",
-  },
-  {
-    id: "4",
-    name: "Honda SH 150i",
-    brand: "Honda",
-    price: "250.000 đ/ngày",
-    image: "https://images.unsplash.com/photo-1542362567-b07e54358753",
-  },
-];
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import { db } from "../../../lib/firebase/firestore";
 
 export default function Manager() {
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight(); // 👈 chiều cao bottom tab
+
+  const [allCars, setAllCars] = useState<any[]>([]);
+  const [cars, setCars] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // REALTIME FIREBASE
+  useEffect(() => {
+    const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setAllCars(data);
+      setCars(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 🗑 XOÁ XE
+  const handleDelete = (id: string) => {
+    Alert.alert("Xoá xe", "Bạn có chắc muốn xoá xe này?", [
+      { text: "Huỷ", style: "cancel" },
+      {
+        text: "Xoá",
+        style: "destructive",
+        onPress: async () => {
+          await deleteDoc(doc(db, "vehicles", id));
+        },
+      },
+    ]);
+  };
+
+  // 🔍 TÌM KIẾM
+  const handleSearch = (text: string) => {
+    setSearch(text);
+
+    if (text === "") {
+      setCars(allCars);
+    } else {
+      const q = text.toLowerCase();
+      const filtered = allCars.filter((car) =>
+        car.name?.toLowerCase().includes(q)
+      );
+      setCars(filtered);
+    }
+  };
 
   return (
-    <View className="flex-1 bg-gray-50 p-4">
-
-      {/* Header */}
-      <View className="flex-row justify-between items-center mb-4">
+    <View className="flex-1 bg-gray-50 px-4">
+      {/* HEADER */}
+      <View className="flex-row justify-between items-center my-4">
         <Text className="text-2xl font-bold">Quản lý xe</Text>
 
         <TouchableOpacity
@@ -51,49 +92,60 @@ export default function Manager() {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
-      <View className="flex-row items-center bg-white rounded-xl p-3 mb-4 border border-gray-200">
+      {/* SEARCH */}
+      <View className="flex-row bg-white rounded-xl px-3 py-3 mb-4 items-center">
         <Ionicons name="search" size={20} color="#777" />
         <TextInput
           placeholder="Tìm kiếm xe..."
           className="ml-2 flex-1"
+          value={search}
+          onChangeText={handleSearch}
         />
       </View>
 
-      {/* List */}
+      {loading && (
+        <Text className="text-center text-gray-500">Đang tải...</Text>
+      )}
+
       <FlatList
         data={cars}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: tabBarHeight + 24, // 👈 chừa chỗ cho bottom bar
+        }}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => router.push(`/manager/info?id=${item.id}`)}
-            className="bg-white rounded-2xl p-3 flex-row items-center mb-4 border border-gray-100"
-          >
+          <View className="bg-white rounded-2xl p-3 flex-row items-center mb-4">
             <Image
-              source={{ uri: item.image }}
-              className="w-[70px] h-[70px] rounded-xl"
+              source={{ uri: item.images?.[0] }}
+              className="w-16 h-16 rounded-xl"
+              resizeMode="cover"
             />
 
             <View className="flex-1 ml-3">
-              <Text className="font-bold text-base">{item.name}</Text>
+              <Text className="font-bold">{item.name}</Text>
               <Text className="text-gray-500">{item.brand}</Text>
-              <Text className="text-pink-700 font-bold">{item.price}</Text>
+              <Text className="text-pink-700 font-bold">
+                {Number(item.price).toLocaleString()} đ/ngày
+              </Text>
             </View>
 
-            <View className="justify-between h-[60px]">
+            <View className="justify-between h-16">
               <TouchableOpacity
                 onPress={() => router.push(`/manager/edit?id=${item.id}`)}
-                className="bg-slate-100 p-2 rounded-xl"
+                className="bg-gray-100 p-2 rounded-xl"
               >
                 <Ionicons name="create-outline" size={18} />
               </TouchableOpacity>
 
-              <TouchableOpacity className="bg-red-100 p-2 rounded-xl">
+              <TouchableOpacity
+                onPress={() => handleDelete(item.id)}
+                className="bg-red-100 p-2 rounded-xl"
+              >
                 <Ionicons name="trash" size={18} color="red" />
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         )}
       />
     </View>

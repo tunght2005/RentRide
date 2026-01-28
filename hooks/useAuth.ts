@@ -32,6 +32,7 @@ export function useAuth() {
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!,
     scopes: ["profile", "email"],
     redirectUri,
+  
   });
 
   // Firebase auth listener
