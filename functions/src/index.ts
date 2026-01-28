@@ -1,8 +1,14 @@
 import cors from "cors";
 import * as crypto from "crypto";
 import express from "express";
+import { initializeApp } from "firebase-admin/app";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import * as qs from "qs";
+
+// Initialize Firebase Admin
+initializeApp();
+const db = getFirestore();
 
 const app = express();
 app.use(cors({ origin: true }));
@@ -17,12 +23,17 @@ const vnpConfig = {
 
 app.post("/", (req, res) => {
   const amount = Number(req.body.amount);
+  const orderId = req.body.orderId;
+
   if (!amount || amount <= 0) {
     return res.status(400).json({ message: "Invalid amount" });
   }
 
+  if (!orderId) {
+    return res.status(400).json({ message: "Invalid orderId" });
+  }
+
   const date = new Date(Date.now() + 7 * 60 * 60 * 1000);
-  const orderId = Date.now().toString();
 
   const vnpParams: Record<string, any> = {
     vnp_Version: "2.1.0",
@@ -60,6 +71,35 @@ app.post("/", (req, res) => {
     vnpConfig.url + "?" + qs.stringify(sortedParams, { encode: true });
 
   return res.json({ paymentUrl });
+});
+
+// Update contract status endpoint
+app.post("/updateContractStatus", async (req, res) => {
+  try {
+    const { orderId, status } = req.body;
+
+    if (!orderId || !status) {
+      return res.status(400).json({ message: "Missing orderId or status" });
+    }
+
+    const contractRef = db.collection("contracts").doc(orderId);
+    const contractSnap = await contractRef.get();
+
+    if (!contractSnap.exists) {
+      return res.status(404).json({ message: "Contract not found" });
+    }
+
+    // Update contract status
+    await contractRef.update({
+      status,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    return res.json({ success: true, message: "Contract status updated" });
+  } catch (error) {
+    console.error("Error updating contract:", error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
 });
 
 export const createVNPayPayment = onRequest(app);
