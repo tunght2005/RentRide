@@ -5,14 +5,40 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  query,
   serverTimestamp,
   setDoc,
-  updateDoc
+  Timestamp,
+  updateDoc,
+  where,
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
 
 export const db = getFirestore(firebaseApp);
 
+export interface ContractData {
+  id: string;
+  userId: string;
+  status: "pending" | "paid" | "completed" | "cancelled";
+  // Object booking lồng bên trong
+  booking: {
+    startDate: Timestamp;
+    endDate: Timestamp;
+    rentalDays: number;
+    totalPrice: number;
+    pricePerDay?: number;
+    createdAt?: any;
+  };
+  // Object vehicle lồng bên trong
+  vehicle: {
+    id: string;
+    name: string;
+    image: string;
+    brand: string;
+    year: number;
+    licensePlate: string;
+  };
+}
 /**
  * ✅ TẠO PROFILE CHO GOOGLE USER (NẾU CHƯA TỒN TẠI)
  */
@@ -88,4 +114,19 @@ export async function getVehicleById(id: string) {
     id: snap.id,
     ...snap.data(),
   };
+}
+// Lấy dữ liệu từ collection contracts
+export async function getUserBookings(uid: string) {
+  try {
+    const q = query(collection(db, "contracts"), where("userId", "==", uid));
+
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("Error getting contracts:", error);
+    return [];
+  }
 }

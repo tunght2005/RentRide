@@ -1,176 +1,222 @@
-import { useRouter } from "expo-router"; // 1. Import router
-import React from "react";
-import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
+import { useBookings } from "@/hooks/useBookings";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Modal,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-// 1. Định nghĩa kiểu dữ liệu (TypeScript)
-interface BookingItem {
-  id: number;
-  vehicleName: string;
-  startDate: string;
-  endDate: string;
-  duration: string;
-  status: string;
-  price: string;
-  image: string;
-}
-
-// 2. Dữ liệu mẫu (Mock Data)
-const bookingHistoryData: BookingItem[] = [
-  {
-    id: 1,
-    vehicleName: "Toyota Vios 2023",
-    startDate: "20/01/2024",
-    endDate: "23/01/2024",
-    duration: "3 ngày",
-    status: "Hoàn thành",
-    price: "2.400.000 ₫",
-    image:
-      "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: 2,
-    vehicleName: "Honda SH 150i",
-    startDate: "01/02/2024",
-    endDate: "05/02/2024",
-    duration: "4 ngày",
-    status: "Đã thanh toán",
-    price: "1.000.000 ₫",
-    image:
-      "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: 3,
-    vehicleName: "Hyundai Tucson 2023",
-    startDate: "10/02/2024",
-    endDate: "12/02/2024",
-    duration: "2 ngày",
-    status: "Chờ xử lý",
-    price: "2.400.000 ₫",
-    image:
-      "https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: 4,
-    vehicleName: "Honda PCX 160",
-    startDate: "05/03/2024",
-    endDate: "07/03/2024",
-    duration: "2 ngày",
-    status: "Chờ xử lý",
-    price: "520.000 ₫",
-    image:
-      "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?q=80&w=200&auto=format&fit=crop",
-  },
-];
-
-// 3. Component con: Badge hiển thị trạng thái
-const StatusBadge = ({ status }: { status: string }) => {
-  let containerStyle = "";
-  let textStyle = "";
-
-  switch (status) {
-    case "Hoàn thành":
-      containerStyle = "bg-green-100";
-      textStyle = "text-green-600";
-      break;
-    case "Đã thanh toán":
-      containerStyle = "bg-blue-100";
-      textStyle = "text-blue-600";
-      break;
-    case "Chờ xử lý":
-      containerStyle = "bg-orange-100";
-      textStyle = "text-orange-600";
-      break;
-    default:
-      containerStyle = "bg-gray-100";
-      textStyle = "text-gray-600";
-  }
-
-  return (
-    <View className={`px-2 py-1 rounded-full self-start ${containerStyle}`}>
-      <Text className={`text-xs font-medium ${textStyle}`}>{status}</Text>
-    </View>
-  );
-};
-
-// 4. Component con: Từng item trong danh sách
-const BookingCard = ({ item }: { item: BookingItem }) => (
-  <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100 shadow-sm">
-    <View className="flex-row">
-      <Image
-        source={{ uri: item.image }}
-        className="w-20 h-20 rounded-lg bg-gray-200"
-        resizeMode="cover"
-      />
-      <View className="flex-1 ml-3 justify-between">
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1 mr-2">
-            <Text
-              className="text-base font-bold text-gray-800"
-              numberOfLines={1}
-            >
-              {item.vehicleName}
-            </Text>
-            <Text className="text-xs text-gray-500 mt-1">
-              {item.startDate} - {item.endDate}
-            </Text>
-            <Text className="text-xs text-gray-500 mt-0.5">
-              {item.duration}
-            </Text>
-          </View>
-          <StatusBadge status={item.status} />
-        </View>
-      </View>
-    </View>
-
-    <View className="h-[1px] bg-gray-100 my-3" />
-
-    <View className="flex-row justify-between items-center bg-gray-50 p-2 rounded-lg">
-      <Text className="text-sm text-gray-500">Tổng tiền</Text>
-      <Text className="text-lg font-bold text-red-800">{item.price}</Text>
-    </View>
-  </View>
-);
-
-// 5. Component Chính
 export default function BookingsScreen() {
-  const router = useRouter(); // 2. Khởi tạo router
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Giả lập user (nếu chưa có context)
-  const user = {
-    avatar: null, // Để null để test trường hợp fallback ảnh mặc định
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) setCurrentUserId(user.uid);
+      else setCurrentUserId(null);
+      setInitializing(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const {
+    bookings,
+    loading,
+    error,
+    formatCurrency,
+    formatDate,
+    getStatusStyles,
+    refetch,
+  } = useBookings(currentUserId || undefined);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (refetch) await refetch();
+    setRefreshing(false);
   };
 
-  return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header đã sửa: Dùng flex-row để căn ngang */}
-      <View className="flex-row justify-between items-center p-4 bg-white border-b border-gray-100 pt-12">
-        {/* pt-12 để tránh tai thỏ (notch) trên iPhone nếu không dùng SafeAreaView */}
-
-        <Text className="text-xl font-bold text-gray-800">Lịch sử đặt xe</Text>
-
-        <TouchableOpacity
-          onPress={() => router.push("/profile")} // 3. Điều hướng
-          className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 border border-gray-200"
-        >
-          <Image
-            source={{
-              uri:
-                user?.avatar ||
-                "https://ui-avatars.com/api/?name=User&background=random",
-            }}
-            className="w-full h-full"
-          />
-        </TouchableOpacity>
+  if (initializing || (loading && !refreshing && !bookings.length)) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#0000ff" />
       </View>
+    );
+  }
 
-      {/* Danh sách cuộn */}
+  if (!currentUserId) {
+    return (
+      <View className="flex-1 justify-center items-center p-4">
+        <Text>Vui lòng đăng nhập để xem lịch sử.</Text>
+      </View>
+    );
+  }
+
+  const modalStatusStyle = selectedBooking
+    ? getStatusStyles(selectedBooking.status)
+    : null;
+
+  return (
+    <View className="flex-1 bg-white pt-12 px-4 pb-4">
       <FlatList
-        data={bookingHistoryData}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <BookingCard item={item} />}
-        contentContainerStyle={{ padding: 16 }}
+        ListHeaderComponent={
+          <Text className="text-xl font-bold text-gray-800 mb-4">
+            Lịch sử đặt xe
+          </Text>
+        }
+        data={bookings}
+        keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <View className="items-center mt-20">
+            <Text className="text-gray-400 text-lg">
+              Bạn chưa có chuyến đi nào.
+            </Text>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const statusStyle = getStatusStyles(item.status);
+          const vehicle = item.vehicle || {};
+          const booking = item.booking || {};
+
+          return (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setSelectedBooking(item)}
+            >
+              <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100 shadow-sm shadow-gray-200">
+                <View className="flex-row">
+                  <Image
+                    source={{
+                      uri: vehicle.image || "https://via.placeholder.com/150",
+                    }}
+                    className="w-24 h-20 rounded-lg bg-gray-200"
+                    resizeMode="cover"
+                  />
+                  <View className="flex-1 ml-3 justify-between">
+                    <View className="flex-row justify-between items-start">
+                      <Text
+                        className="text-base font-bold text-gray-900 flex-1 mr-2"
+                        numberOfLines={1}
+                      >
+                        {vehicle.name || "Tên xe ẩn"}
+                      </Text>
+
+                      <View
+                        className={`px-2 py-1 rounded-full ${statusStyle.container}`}
+                      >
+                        <Text
+                          className={`text-[10px] font-medium ${statusStyle.text}`}
+                        >
+                          {statusStyle.label}
+                        </Text>
+                      </View>
+                    </View>
+                    <View>
+                      <Text className="text-xs text-gray-500 mt-1">
+                        {formatDate(booking.startDate)} -{" "}
+                        {formatDate(booking.endDate)}
+                      </Text>
+                      <Text className="text-xs text-gray-400 mt-0.5">
+                        {booking.rentalDays} ngày
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View className="h-[1px] bg-gray-100 my-3" />
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-sm text-gray-500">Tổng tiền</Text>
+                  <Text className="text-base font-bold text-red-600">
+                    {formatCurrency(booking.totalPrice || 0)}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
       />
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={!!selectedBooking}
+        onRequestClose={() => setSelectedBooking(null)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center p-4">
+          <View className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl items-center">
+            <Image
+              source={{
+                uri:
+                  selectedBooking?.vehicle?.image ||
+                  "https://via.placeholder.com/300",
+              }}
+              className="w-full h-48 rounded-xl bg-gray-100 mb-4"
+              resizeMode="cover"
+            />
+
+            <Text className="text-xl font-bold text-gray-900 text-center mb-2">
+              {selectedBooking?.vehicle?.name || "Chi tiết xe"}
+            </Text>
+
+            <View className="w-full bg-gray-50 p-3 rounded-lg mb-4">
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-gray-500 text-sm">Ngày nhận:</Text>
+                <Text className="text-gray-800 font-medium text-sm">
+                  {formatDate(selectedBooking?.booking?.startDate)}
+                </Text>
+              </View>
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-gray-500 text-sm">Ngày trả:</Text>
+                <Text className="text-gray-800 font-medium text-sm">
+                  {formatDate(selectedBooking?.booking?.endDate)}
+                </Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-gray-500 text-sm">Tổng ngày:</Text>
+                <Text className="text-gray-800 font-medium text-sm">
+                  {selectedBooking?.booking?.rentalDays} ngày
+                </Text>
+              </View>
+            </View>
+
+            {modalStatusStyle && (
+              <View className="w-full flex-row justify-between items-center mb-6 px-1">
+                <View
+                  className={`px-3 py-1.5 rounded-full ${modalStatusStyle.container}`}
+                >
+                  <Text
+                    className={`text-sm font-bold ${modalStatusStyle.text}`}
+                  >
+                    {modalStatusStyle.label}
+                  </Text>
+                </View>
+                <Text className="text-xl font-bold text-red-600">
+                  {formatCurrency(selectedBooking?.booking?.totalPrice)}
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              className="bg-black w-full py-3 rounded-xl items-center"
+              onPress={() => setSelectedBooking(null)}
+            >
+              <Text className="text-white font-bold text-base">Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
