@@ -5,8 +5,8 @@ import {
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import "../global.css";
 import "react-native-reanimated";
+import "../global.css";
 
 // eslint-disable-next-line import/no-unresolved
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -35,6 +35,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(admin)" />
+        <Stack.Screen name="payment-success" />
         <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
