@@ -1,5 +1,16 @@
 import { User } from "firebase/auth";
 import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
     collection,
     doc,
     getDoc,
@@ -15,6 +26,27 @@ import { firebaseApp } from "./config";
 
 export const db = getFirestore(firebaseApp);
 
+export interface ContractData {
+  id: string;
+  userId: string;
+  status: "pending" | "paid" | "completed" | "cancelled";
+  booking: {
+    startDate: Timestamp;
+    endDate: Timestamp;
+    rentalDays: number;
+    totalPrice: number;
+    pricePerDay?: number;
+    createdAt?: any;
+  };
+  vehicle: {
+    id: string;
+    name: string;
+    image: string;
+    brand: string;
+    year: number;
+    licensePlate: string;
+  };
+}
 /**
  * ✅ TẠO PROFILE CHO GOOGLE USER (NẾU CHƯA TỒN TẠI)
  */
@@ -91,27 +123,40 @@ export async function getVehicleById(id: string) {
     ...snap.data(),
   };
 }
+// Lấy dữ liệu từ collection contracts
+export async function getUserBookings(uid: string) {
+  try {
+    const q = query(collection(db, "contracts"), where("userId", "==", uid));
 
-// Lịch sử thuê xe của user
-export async function getBookingsByUser(userId: string) {
-  const q = query(collection(db, "bookings"), where("userId", "==", userId));
-
-  const snap = await getDocs(q);
-
-  return snap.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("Error getting contracts:", error);
+    return [];
+  }
 }
 
-// Lịch sử thuê xe
-export async function getAllBookings() {
-  const snap = await getDocs(collection(db, "bookings"));
+// Lấy xe đã thanh toán
+export async function getPaidContracts(uid: string) {
+  try {
+    const q = query(
+      collection(db, "contracts"),
+      where("userId", "==", uid),
+      where("status", "==", "paid"),
+    );
 
-  return snap.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as ContractData[];
+  } catch (error) {
+    console.error("Error getting paid contracts:", error);
+    return [];
+  }
 }
 
 /**
