@@ -1,24 +1,14 @@
 import { getAuth } from "firebase/auth";
 import { useEffect, useMemo, useState } from "react";
-import { getUserProfile } from "../lib/firebase/firestore";
+import { getPaidContracts, getUserProfile } from "../lib/firebase/firestore";
 
 export function useVehicles(vehicles: any[]) {
-  // =====================
-  // 🔍 SEARCH
-  // =====================
   const [searchText, setSearchText] = useState("");
-  const isSearching = searchText.trim().length > 0;
-  // =====================
-  // 🎯 FILTERS
-  // =====================
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [maxPrice, setMaxPrice] = useState(30000000);
-
-  // =====================
-  // 👤 USER / AVATAR
-  // =====================
   const [user, setUser] = useState<any>(null);
+  const [rentingVehicles, setRentingVehicles] = useState<any[]>([]);
 
   useEffect(() => {
     const auth = getAuth();
@@ -26,85 +16,85 @@ export function useVehicles(vehicles: any[]) {
 
     if (currentUser) {
       getUserProfile(currentUser.uid).then(setUser);
+
+      // 2. Lấy danh sách xe đang thuê (status: paid)
+      getPaidContracts(currentUser.uid).then((contracts) => {
+        const activeVehicles = contracts.map((c) => ({
+          ...c.vehicle,
+          price: c.booking.pricePerDay || 0,
+          images: [c.vehicle.image],
+        }));
+        setRentingVehicles(activeVehicles);
+      });
     }
   }, []);
 
-  // =====================
-  // 🧹 NORMALIZE
-  // =====================
   function normalize(text?: string) {
     return text?.toLowerCase().trim();
   }
 
-  // =====================
-  // 🔹 đang filter (KHÔNG tính search)
-  // =====================
   const isFiltering =
     selectedType !== null || selectedLocation !== null || maxPrice < 30000000;
 
-  // =====================
-  // 🔹 reset filters
-  // =====================
-  function resetFilters() {
+  const resetFilters = () => {
     setSelectedType(null);
     setSelectedLocation(null);
     setMaxPrice(30000000);
-  }
+  };
 
-  function resetSearch() {
-    setSearchText("");
-  }
+  const resetSearch = () => setSearchText("");
+
+  // Lấy danh sách các tỉnh thành từ data xe
   const locations = useMemo(() => {
     const set = new Set<string>();
-
     vehicles.forEach((v) => {
-      if (v.locationId) {
-        set.add(v.locationId.toUpperCase());
-      }
+      if (v.locationId) set.add(v.locationId.toUpperCase());
     });
-
     return Array.from(set);
   }, [vehicles]);
 
-  // =====================
-  // 🚗 FILTERED VEHICLES
-  // =====================
+  // Lấy danh sách ID các xe đang thuê để ẩn
+  const rentedVehicleIds = useMemo(() => {
+    return rentingVehicles.map((v) => v.id);
+  }, [rentingVehicles]);
+
   const filteredVehicles = useMemo(() => {
     return vehicles.filter((v) => {
-      // 🔍 name
+      // 1. Ẩn xe nếu nó nằm trong danh sách đang thuê
+      if (rentedVehicleIds.includes(v.id)) return false;
+
       const matchName =
         !searchText ||
         (normalize(v.name) ?? "").includes(normalize(searchText) ?? "");
-      // 🚘 type
+
       const matchType = selectedType
         ? Array.isArray(v.type)
-          ? v.type.some((t: string) => normalize(t) === normalize(selectedType))
+          ? v.type.some((t: any) => normalize(t) === normalize(selectedType))
           : normalize(v.type) === normalize(selectedType)
         : true;
 
-      // 📍 location (HCM / HN – KHÔNG phân biệt hoa thường)
       const matchLocation = selectedLocation
         ? normalize(v.locationId) === normalize(selectedLocation)
         : true;
 
-      // 💰 price
       const price = Number(v.price ?? 0);
       const matchPrice = price <= maxPrice;
 
       return matchName && matchType && matchLocation && matchPrice;
     });
-  }, [vehicles, searchText, selectedType, selectedLocation, maxPrice]);
+  }, [
+    vehicles,
+    searchText,
+    selectedType,
+    selectedLocation,
+    maxPrice,
+    rentedVehicleIds,
+  ]);
 
-  // =====================
-  // 📦 EXPORT
-  // =====================
   return {
-    // 🔍 search
     searchText,
     setSearchText,
     resetSearch,
-
-    // 🎯 filters
     selectedType,
     selectedLocation,
     maxPrice,
@@ -112,11 +102,9 @@ export function useVehicles(vehicles: any[]) {
     setSelectedLocation,
     setMaxPrice,
     resetFilters,
-
-    // 👤 user
+    rentingVehicles,
     user,
     locations,
-    // 📦 computed
     filteredVehicles,
     isFiltering,
   };

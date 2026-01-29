@@ -20,7 +20,6 @@ export interface ContractData {
   id: string;
   userId: string;
   status: "pending" | "paid" | "completed" | "cancelled";
-  // Object booking lồng bên trong
   booking: {
     startDate: Timestamp;
     endDate: Timestamp;
@@ -29,7 +28,6 @@ export interface ContractData {
     pricePerDay?: number;
     createdAt?: any;
   };
-  // Object vehicle lồng bên trong
   vehicle: {
     id: string;
     name: string;
@@ -127,6 +125,26 @@ export async function getUserBookings(uid: string) {
     }));
   } catch (error) {
     console.error("Error getting contracts:", error);
+    return [];
+  }
+}
+
+// Lấy xe đã thanh toán
+export async function getPaidContracts(uid: string) {
+  try {
+    const q = query(
+      collection(db, "contracts"),
+      where("userId", "==", uid),
+      where("status", "==", "paid"),
+    );
+
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as ContractData[];
+  } catch (error) {
+    console.error("Error getting paid contracts:", error);
     return [];
   }
 }
