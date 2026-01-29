@@ -10,9 +10,7 @@ import {
 import { useState } from "react";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons"; // Import Icon
-
-// Import component cũ của bạn
+import { Ionicons } from "@expo/vector-icons";
 import { Input } from "../../components/common/Input";
 import { Button } from "../../components/common/Button";
 import { useAuth } from "../../hooks/useAuth";

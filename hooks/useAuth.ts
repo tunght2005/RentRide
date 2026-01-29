@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -23,8 +24,10 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 export function useAuth() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const redirectUri = AuthSession.makeRedirectUri();
 
@@ -52,21 +55,92 @@ export function useAuth() {
   // Handle Google OAuth result
   useEffect(() => {
     if (response?.type === "success") {
-      const { accessToken } = response.authentication ?? {};
-      if (!accessToken) return;
+      const auth_result = response.authentication;
+      console.log("🔍 Google Response:", auth_result);
 
-      const credential = GoogleAuthProvider.credential(null, accessToken);
+      if (!auth_result) {
+        console.error("❌ Không có authentication từ Google");
+        setGoogleLoading(false);
+        return;
+      }
 
-      signInWithCredential(auth, credential);
+      // ✅ Firebase OAuth credential có thể nhận null cho idToken nếu chỉ có accessToken
+      // Nó sẽ xử lý bằng cách làm refresh token request
+      const { idToken, accessToken } = auth_result;
+
+      if (!accessToken) {
+        console.error("❌ Không nhận được accessToken từ Google");
+        setGoogleLoading(false);
+        return;
+      }
+
+      // ✅ Thử đăng nhập với idToken nếu có, nếu không có chỉ dùng accessToken
+      try {
+        const credential = GoogleAuthProvider.credential(
+          idToken || undefined,
+          accessToken,
+        );
+
+        signInWithCredential(auth, credential)
+          .then(async (result) => {
+            console.log("✅ Đăng nhập Google thành công");
+
+            // ✅ Lấy thông tin user profile từ Google
+            const firebaseUser = result.user;
+
+            // Nếu photoURL chưa được set, thử lấy từ Google API
+            if (!firebaseUser.photoURL && accessToken) {
+              try {
+                const userInfoResponse = await fetch(
+                  "https://www.googleapis.com/oauth2/v1/userinfo?access_token=" +
+                    accessToken,
+                );
+                const userInfo = await userInfoResponse.json();
+
+                if (userInfo.picture) {
+                  // Update Firebase user với avatar từ Google
+                  await updateProfile(firebaseUser, {
+                    photoURL: userInfo.picture,
+                  });
+                  console.log(
+                    "✅ Cập nhật avatar từ Google:",
+                    userInfo.picture,
+                  );
+                }
+              } catch (error) {
+                console.warn("⚠️ Không thể lấy avatar từ Google API:", error);
+              }
+            }
+
+            setTimeout(() => {
+              router.replace("/(tabs)");
+              setGoogleLoading(false);
+            }, 500);
+          })
+          .catch((error) => {
+            console.error("❌ Lỗi signInWithCredential:", error.message);
+            setGoogleLoading(false);
+          });
+      } catch (error: any) {
+        console.error("❌ Lỗi tạo credential:", error.message);
+        setGoogleLoading(false);
+      }
+    } else if (response?.type === "dismiss") {
+      console.log("User dismissed OAuth");
+      setGoogleLoading(false);
     }
-  }, [response]);
+  }, [response, router]);
 
   return {
     user,
     loading,
+    googleLoading,
 
     // USER
-    loginWithGoogle: () => promptAsync(),
+    loginWithGoogle: async () => {
+      setGoogleLoading(true);
+      await promptAsync();
+    },
 
     // ADMIN
     loginAdmin: (email: string, password: string) =>
