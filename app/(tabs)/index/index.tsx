@@ -4,7 +4,9 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   FlatList,
+  Alert,
   Image,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -21,6 +23,21 @@ export default function HomeScreen() {
 
   useEffect(() => {
     getAllVehicles().then(setVehicles);
+  }, []);
+  useEffect(() => {
+    // Chỉ chạy trên web (VNPAY redirect)
+    if (Platform.OS === "web") {
+      const success = localStorage.getItem("payment_success");
+
+      if (success === "true") {
+        Alert.alert(
+          "Thanh toán thành công 🎉",
+          "Cảm ơn bạn đã sử dụng dịch vụ RentRide",
+        );
+
+        localStorage.removeItem("payment_success");
+      }
+    }
   }, []);
 
   const {

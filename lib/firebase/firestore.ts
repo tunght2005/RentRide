@@ -11,6 +11,16 @@ import {
   Timestamp,
   updateDoc,
   where,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    getFirestore,
+    query,
+    serverTimestamp,
+    setDoc,
+    updateDoc,
+    where,
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
 
@@ -147,4 +157,63 @@ export async function getPaidContracts(uid: string) {
     console.error("Error getting paid contracts:", error);
     return [];
   }
+}
+
+/**
+ * ✅ LƯU HỢP ĐỒNG VÀO FIREBASE
+ */
+export async function saveContract(
+  userId: string,
+  orderId: string,
+  contractData: any,
+) {
+  const ref = doc(db, "contracts", orderId);
+  await setDoc(ref, {
+    ...contractData,
+    userId,
+    orderId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * ✅ CẬP NHẬT TRẠNG THÁI HỢP ĐỒNG
+ */
+export async function updateContractStatus(
+  orderId: string,
+  status: "pending" | "paid" | "active" | "completed" | "cancelled",
+) {
+  await updateDoc(doc(db, "contracts", orderId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * ✅ LẤY HỢP ĐỒNG THEO ORDER ID
+ */
+export async function getContractByOrderId(orderId: string) {
+  const ref = doc(db, "contracts", orderId);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return null;
+
+  return {
+    id: snap.id,
+    ...snap.data(),
+  };
+}
+
+/**
+ * ✅ LẤY TẤT CẢ HỢP ĐỒNG CỦA USER
+ */
+export async function getContractsByUser(userId: string) {
+  const q = query(collection(db, "contracts"), where("userId", "==", userId));
+  const snap = await getDocs(q);
+
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 }

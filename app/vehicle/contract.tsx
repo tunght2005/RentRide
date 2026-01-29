@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/useAuth";
+import { usePaymentLink } from "@/hooks/usePaymentLink";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -5,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   ScrollView,
   Text,
@@ -32,6 +35,7 @@ const UploadUI = () => (
 export default function ContractScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user } = useAuth();
 
   const [idFrontImage, setIdFrontImage] = useState<string | null>(null);
   const [idBackImage, setIdBackImage] = useState<string | null>(null);
@@ -53,6 +57,8 @@ export default function ContractScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const { createPayment } = usePaymentLink();
 
   useEffect(() => {
     if (!params.startDate || !params.endDate) return;
@@ -127,6 +133,66 @@ export default function ContractScreen() {
       );
     } finally {
       setIsProcessingOCR(false);
+    }
+  };
+  //Thanh toán
+  const handleContinue = async () => {
+    try {
+      if (!user?.uid) {
+        Alert.alert("Lỗi", "Vui lòng đăng nhập trước");
+        return;
+      }
+
+      setIsProcessingPayment(true);
+
+      const contractPayload = {
+        user: {
+          fullName: userData.fullName,
+          phone: userData.phone,
+          email: user.email || "",
+          address: userData.address,
+          dob: userData.dob,
+          cccdNumber: userData.cccdNumber,
+          permanentAddress: userData.permanentAddress,
+          licenseNumber: userData.licenseNumber,
+          licenseClass: userData.licenseClass,
+        },
+
+        documents: {
+          idFrontImage: idFrontImage || "",
+          idBackImage: idBackImage || "",
+          licenseImage: licenseImage || "",
+        },
+
+        vehicle: {
+          id: Array.isArray(params.vehicleId)
+            ? params.vehicleId[0]
+            : params.vehicleId,
+          name: vehicleData.name,
+          brand: vehicleData.brand,
+          year: vehicleData.year,
+          licensePlate: vehicleData.licensePlate,
+          image: vehicleData.images,
+        },
+
+        booking: {
+          startDate: bookingData.startDate.toISOString(),
+          endDate: bookingData.endDate.toISOString(),
+          rentalDays: bookingData.rentalDays,
+          pricePerDay: bookingData.pricePerDay,
+          totalPrice: bookingData.totalPrice,
+        },
+
+        userId: user.uid,
+      };
+
+      const paymentUrl = await createPayment(contractPayload);
+      setIsProcessingPayment(false);
+      Linking.openURL(paymentUrl);
+    } catch (e) {
+      setIsProcessingPayment(false);
+      console.error("Payment error:", e);
+      Alert.alert("Lỗi", "Không thể tạo thanh toán. Vui lòng thử lại.");
     }
   };
 
@@ -724,13 +790,19 @@ export default function ContractScreen() {
       {/* FOOTER BUTTON */}
       <View className="px-4 pb-6 pt-4 bg-white border-t border-gray-200">
         <TouchableOpacity
-          disabled={!isFormValid()}
-          className={`py-4 rounded-2xl active:opacity-80 ${
-            isFormValid() ? "bg-pink-600" : "bg-gray-300"
+          onPress={handleContinue}
+          disabled={!isFormValid() || isProcessingPayment}
+          className={`py-4 rounded-2xl active:opacity-80 flex-row items-center justify-center gap-2 ${
+            isFormValid() && !isProcessingPayment
+              ? "bg-pink-600"
+              : "bg-gray-300"
           }`}
         >
+          {isProcessingPayment && (
+            <ActivityIndicator size="small" color="white" />
+          )}
           <Text className="text-white text-center font-bold text-base">
-            Tiếp tục
+            {isProcessingPayment ? "Đang xử lý..." : "Tiếp tục"}
           </Text>
         </TouchableOpacity>
       </View>
