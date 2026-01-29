@@ -1,24 +1,50 @@
+import { User, getAuth  } from "firebase/auth";
 import {
-  getFirestore,
+  collection,
   doc,
   deleteDoc,
   setDoc,
   getDoc,
+  getDocs,
+  getFirestore,
+  query,
   serverTimestamp,
+  setDoc,
+  Timestamp,
   updateDoc,
-  collection,
-  addDoc,
-  getDocs, query, orderBy,
+  where,orderBy,
+
+    updateDoc,
+    where,
   onSnapshot,
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
-import { User } from "firebase/auth";
-import { getAuth } from "firebase/auth";
 
 console.log("UID:", getAuth().currentUser?.uid);
 
 export const db = getFirestore(firebaseApp);
 
+export interface ContractData {
+  id: string;
+  userId: string;
+  status: "pending" | "paid" | "completed" | "cancelled";
+  booking: {
+    startDate: Timestamp;
+    endDate: Timestamp;
+    rentalDays: number;
+    totalPrice: number;
+    pricePerDay?: number;
+    createdAt?: any;
+  };
+  vehicle: {
+    id: string;
+    name: string;
+    image: string;
+    brand: string;
+    year: number;
+    licensePlate: string;
+  };
+}
 /**
  * ✅ TẠO PROFILE CHO GOOGLE USER (NẾU CHƯA TỒN TẠI)
  */
@@ -74,6 +100,11 @@ export async function getUserProfile(uid: string) {
   return snap.exists() ? snap.data() : null;
 }
 
+// Lấy tất cả danh sách xe
+export async function getAllVehicles() {
+  const snap = await getDocs(collection(db, "vehicles"));
+
+  return snap.docs.map((doc) => ({
 // add vihicle
 export async function addVehicle(data: {
   name: string;
@@ -117,6 +148,10 @@ export async function getVehicles() {
     ...doc.data(),
   }));
 }
+
+// Lấy xe id xe
+export async function getVehicleById(id: string) {
+  const ref = doc(db, "vehicles", id);
 
 
 export async function deleteVehicle(id: string) {
@@ -167,7 +202,79 @@ export async function getOrderById(orderId: string) {
     id: snap.id,
     ...snap.data(),
   };
+
+// Lấy dữ liệu từ collection contracts
+export async function getUserBookings(uid: string) {
+  try {
+    const q = query(collection(db, "contracts"), where("userId", "==", uid));
+
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("Error getting contracts:", error);
+    return [];
+  }
 }
+
+// Lấy xe đã thanh toán
+export async function getPaidContracts(uid: string) {
+  try {
+    const q = query(
+      collection(db, "contracts"),
+      where("userId", "==", uid),
+      where("status", "==", "paid"),
+    );
+
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as ContractData[];
+  } catch (error) {
+    console.error("Error getting paid contracts:", error);
+    return [];
+  }
+}
+
+/**
+ * ✅ LƯU HỢP ĐỒNG VÀO FIREBASE
+ */
+export async function saveContract(
+  userId: string,
+  orderId: string,
+  contractData: any,
+) {
+  const ref = doc(db, "contracts", orderId);
+  await setDoc(ref, {
+    ...contractData,
+    userId,
+    orderId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * ✅ CẬP NHẬT TRẠNG THÁI HỢP ĐỒNG
+ */
+export async function updateContractStatus(
+  orderId: string,
+  status: "pending" | "paid" | "active" | "completed" | "cancelled",
+) {
+  await updateDoc(doc(db, "contracts", orderId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * ✅ LẤY HỢP ĐỒNG THEO ORDER ID
+ */
+export async function getContractByOrderId(orderId: string) {
+  const ref = doc(db, "contracts", orderId);
 
 // Realtime theo dõi đơn thuê (dùng cho trang admin duyệt hồ sơ)
 export function listenOrderById(
@@ -231,3 +338,17 @@ export async function getVehicleById(id: string) {
     ...snap.data(),
   };
 }
+
+/**
+ * ✅ LẤY TẤT CẢ HỢP ĐỒNG CỦA USER
+ */
+export async function getContractsByUser(userId: string) {
+  const q = query(collection(db, "contracts"), where("userId", "==", userId));
+  const snap = await getDocs(q);
+
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}
+
