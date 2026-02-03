@@ -1,25 +1,20 @@
 import axios from "axios";
 
-// FPT.AI Vision API key
 const FPT_AI_API_KEY = process.env.EXPO_PUBLIC_FPT_AI_API_KEY;
 
 type DocumentType = "idFront" | "idBack" | "license";
 
-/**
- * Get correct FPT endpoint by document type
- */
+// Chọn endpoint FPT tương ứng với loại document
 const getEndpointByType = (type: DocumentType) => {
   if (type === "license") {
-    // ✅ Driver License
+    // Driver License
     return "https://api.fpt.ai/vision/dlr/vnm";
   }
-  // ✅ ID Card (CCCD / CMND)
+  // ID Card (CCCD / CMND)
   return "https://api.fpt.ai/vision/idr/vnm";
 };
 
-/**
- * Call FPT.AI Vision API to extract text from document image
- */
+// Gửi yêu cầu đến FPT.AI Vision API để nhận diện và trích xuất chữ từ hình ảnh tài liệu
 export const extractDataFromFPTAI = async (
   imageBase64: string,
   documentType: DocumentType,
@@ -55,7 +50,7 @@ export const extractDataFromFPTAI = async (
 
   const data = response.data.data?.[0] || {};
 
-  // ===== Mapping theo loại giấy tờ =====
+  // Mapping theo loại giấy tờ
   if (documentType === "idFront") {
     return {
       fullName: data.name || "",
@@ -70,18 +65,13 @@ export const extractDataFromFPTAI = async (
       cccdNumber: data.id || "",
     };
   }
-
-  // Driver License
   return {
     licenseNumber: data.id || "",
     licenseClass: data.class || "",
   };
 };
 
-/**
- * Convert image URI (web / mobile) → base64
- * Expo SDK 54+ SAFE
- */
+// Convert image URI (web / mobile) → base64
 export const convertImageToBase64 = async (
   imageUri: string,
 ): Promise<string> => {

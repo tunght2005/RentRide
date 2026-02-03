@@ -18,7 +18,7 @@ export default function ForgotPasswordScreen() {
         "Thành công",
         "Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư.",
       );
-      router.back(); // quay lại login
+      router.back();
     } catch (e: any) {
       Alert.alert("Lỗi", e.message);
     } finally {

@@ -1,5 +1,4 @@
 import { Redirect } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../hooks/useAuth";
 import { useUser } from "../hooks/useUser";
 
@@ -8,11 +7,7 @@ export default function Index() {
   const { profile, loading: profileLoading } = useUser(user);
 
   if (authLoading || profileLoading) {
-    return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <Redirect href="/start" />;
   }
 
   if (!user) return <Redirect href="/(auth)/login" />;

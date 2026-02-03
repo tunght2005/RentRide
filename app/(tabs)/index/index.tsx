@@ -24,6 +24,7 @@ export default function HomeScreen() {
   useEffect(() => {
     getAllVehicles().then(setVehicles);
   }, []);
+
   useEffect(() => {
     // Chỉ chạy trên web (VNPAY redirect)
     if (Platform.OS === "web") {
@@ -31,7 +32,7 @@ export default function HomeScreen() {
 
       if (success === "true") {
         Alert.alert(
-          "Thanh toán thành công 🎉",
+          "Thanh toán thành công",
           "Cảm ơn bạn đã sử dụng dịch vụ RentRide",
         );
 
@@ -59,7 +60,7 @@ export default function HomeScreen() {
 
   const featuredVehicles = filteredVehicles.slice(0, 3);
 
-  // Component render từng item cho danh sách chính (Tất cả xe)
+  // Component
   const renderVehicleItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       key={item.id}
@@ -118,7 +119,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* FILTER SECTION */}
+      {/* FILTER */}
       <View className="mt-4">
         <TouchableOpacity
           className="flex-row items-center justify-between"

@@ -11,13 +11,13 @@ export async function uploadImageToCloudinary(uri: string): Promise<string> {
   const formData = new FormData();
 
   if (Platform.OS === "web") {
-    // ✅ WEB: fetch blob từ blob:url
+    // WEB: fetch blob từ blob:url
     const response = await fetch(uri);
     const blob = await response.blob();
 
     formData.append("file", blob, "avatar.jpg");
   } else {
-    // ✅ MOBILE: dùng uri trực tiếp
+    // MOBILE: dùng uri trực tiếp
     formData.append("file", {
       uri,
       name: "avatar.jpg",

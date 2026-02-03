@@ -12,26 +12,26 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
-import { db } from "../../../lib/firebase/firestore";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { db, deleteVehicle } from "../../../lib/firebase/firestore";
 
 export default function Manager() {
   const router = useRouter();
-  const tabBarHeight = useBottomTabBarHeight(); // 👈 chiều cao bottom tab
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [allCars, setAllCars] = useState<any[]>([]);
   const [cars, setCars] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    visible: boolean;
+    id: string;
+  }>({
+    visible: false,
+    id: "",
+  });
 
-  // REALTIME FIREBASE
   useEffect(() => {
     const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"));
 
@@ -49,21 +49,31 @@ export default function Manager() {
     return () => unsubscribe();
   }, []);
 
-  // 🗑 XOÁ XE
+  // XOÁ XE
   const handleDelete = (id: string) => {
-    Alert.alert("Xoá xe", "Bạn có chắc muốn xoá xe này?", [
-      { text: "Huỷ", style: "cancel" },
-      {
-        text: "Xoá",
-        style: "destructive",
-        onPress: async () => {
-          await deleteDoc(doc(db, "vehicles", id));
-        },
-      },
-    ]);
+    setConfirmDelete({ visible: true, id });
   };
 
-  // 🔍 TÌM KIẾM
+  const confirmDeleteVehicle = async () => {
+    const id = confirmDelete.id;
+    try {
+      setDeleting(true);
+      const result = await deleteVehicle(id);
+      console.log("Delete result:", result);
+      setConfirmDelete({ visible: false, id: "" });
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      console.error("Error message:", error.message);
+      Alert.alert(
+        " Lỗi",
+        error.message || "Không thể xoá xe. Kiểm tra quyền admin.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // TÌM KIẾM
   const handleSearch = (text: string) => {
     setSearch(text);
 
@@ -72,7 +82,7 @@ export default function Manager() {
     } else {
       const q = text.toLowerCase();
       const filtered = allCars.filter((car) =>
-        car.name?.toLowerCase().includes(q)
+        car.name?.toLowerCase().includes(q),
       );
       setCars(filtered);
     }
@@ -112,7 +122,7 @@ export default function Manager() {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: tabBarHeight + 24, // 👈 chừa chỗ cho bottom bar
+          paddingBottom: tabBarHeight + 24,
         }}
         renderItem={({ item }) => (
           <View className="bg-white rounded-2xl p-3 flex-row items-center mb-4">
@@ -140,14 +150,55 @@ export default function Manager() {
 
               <TouchableOpacity
                 onPress={() => handleDelete(item.id)}
-                className="bg-red-100 p-2 rounded-xl"
+                disabled={deleting}
+                className={`p-2 rounded-xl ${
+                  deleting ? "bg-gray-200" : "bg-red-100"
+                }`}
               >
-                <Ionicons name="trash" size={18} color="red" />
+                <Ionicons
+                  name="trash"
+                  size={18}
+                  color={deleting ? "#ccc" : "red"}
+                />
               </TouchableOpacity>
             </View>
           </View>
         )}
       />
+
+      {/* CONFIRM DELETE MODAL */}
+      {confirmDelete.visible && (
+        <View className="absolute inset-0 bg-black/50 flex items-center justify-center">
+          <View className="bg-white rounded-2xl p-6 w-80">
+            <Text className="text-lg font-bold mb-4">Xoá xe</Text>
+            <Text className="text-gray-600 mb-6">
+              Bạn có chắc muốn xoá xe này?
+            </Text>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  console.warn("⏹️ Người dùng nhấn Huỷ");
+                  setConfirmDelete({ visible: false, id: "" });
+                }}
+                className="flex-1 bg-gray-200 py-3 rounded-lg"
+              >
+                <Text className="text-center font-semibold">Huỷ</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmDeleteVehicle}
+                disabled={deleting}
+                className={`flex-1 py-3 rounded-lg ${
+                  deleting ? "bg-gray-300" : "bg-red-500"
+                }`}
+              >
+                <Text className="text-center font-semibold text-white">
+                  {deleting ? "Đang xoá..." : "Xoá"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

@@ -36,10 +36,9 @@ export const usePaymentLink = () => {
     };
     userId: string;
   }) => {
-    // Tạo orderId
     const orderId = `${Date.now()}`;
 
-    // Lưu contract vào Firebase với cấu trúc nested đúng
+    // Lưu contract vào Firebase với cấu trúc
     const contractData = {
       orderId,
       userId: contractPayload.userId,

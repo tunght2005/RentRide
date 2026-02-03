@@ -1,9 +1,10 @@
 import { useBookings } from "@/hooks/useBookings";
-import { getVehicleById } from "@/lib/firebase/firestore";
+import { getVehicleById, db } from "@/lib/firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
-import { useEffect, useRef, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -32,6 +33,9 @@ export default function VehicleDetails() {
     "start",
   );
   const [tempDate, setTempDate] = useState(new Date());
+  const [showContractsModal, setShowContractsModal] = useState(false);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const { width } = Dimensions.get("window");
 
@@ -49,6 +53,40 @@ export default function VehicleDetails() {
         setLoading(false);
       });
   }, [id]);
+  // Lấy hợp đồng của user và xe
+  const fetchContracts = async () => {
+    const user = getAuth().currentUser;
+    if (!user?.uid) return;
+
+    setLoadingContracts(true);
+    try {
+      const contractsRef = collection(db, "contracts");
+
+      const q = query(
+        contractsRef,
+        where("userId", "==", user.uid),
+        where("vehicle.id", "==", id),
+      );
+      const snapshot = await getDocs(q);
+
+      const contractsList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      contractsList.sort((a: any, b: any) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(0);
+        const dateB = b.createdAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setContracts(contractsList);
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+    } finally {
+      setLoadingContracts(false);
+    }
+  };
 
   const formatDate = (date: Date) => {
     return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
@@ -88,7 +126,12 @@ export default function VehicleDetails() {
             data={vehicle?.images || []}
             horizontal
             pagingEnabled
-            scrollEnabled={false}
+            scrollEnabled={true}
+            showsHorizontalScrollIndicator={false}
+            onScroll={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / width);
+              setCurrentImageIndex(index);
+            }}
             renderItem={({ item }) => (
               <Image
                 source={{ uri: item }}
@@ -197,10 +240,13 @@ export default function VehicleDetails() {
                     endDate: endDate.toISOString(),
                     totalPrice: totalPrice.toString(),
                     rentalDays: rentalDays.toString(),
+                    pricePerDay: (vehicle?.price || 0).toString(),
                     vehicleId: id,
-                    vehicleName: vehicle.name,
-                    vehicleImage: vehicle.images[0],
-                    licensePlate: vehicle.plate,
+                    vehicleImage: vehicle?.images[0],
+                    vehicleName: vehicle?.name,
+                    vehicleBrand: vehicle?.brand,
+                    vehicleYear: vehicle?.year?.toString(),
+                    licensePlate: vehicle?.plate,
                   },
                 })
               }
@@ -223,7 +269,10 @@ export default function VehicleDetails() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => router.push("/profile")}
+              onPress={() => {
+                setShowContractsModal(true);
+                fetchContracts();
+              }}
               className="mt-4 bg-gray-50 py-4 rounded-2xl border border-gray-200"
             >
               <Text className="text-center font-bold text-gray-700">
@@ -279,11 +328,260 @@ export default function VehicleDetails() {
           </View>
         </View>
       </Modal>
+
+      {/* Contracts Modal */}
+      <Modal
+        visible={showContractsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowContractsModal(false)}
+      >
+        <View className="flex-1 bg-black/50">
+          <View className="flex-1 bg-white mt-20 rounded-t-3xl">
+            {/* Header */}
+            <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+              <Text className="text-lg font-bold">Hợp đồng của tôi</Text>
+              <TouchableOpacity
+                onPress={() => setShowContractsModal(false)}
+                className="p-2"
+              >
+                <Ionicons name="close" size={28} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Content */}
+            {loadingContracts ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color="#EC4899" />
+                <Text className="text-gray-600 mt-4">Đang tải...</Text>
+              </View>
+            ) : contracts.length === 0 ? (
+              <View className="flex-1 items-center justify-center px-6">
+                <Ionicons
+                  name="document-text-outline"
+                  size={80}
+                  color="#D1D5DB"
+                />
+                <Text className="text-xl font-bold text-gray-800 mt-6">
+                  Chưa có hợp đồng
+                </Text>
+                <Text className="text-gray-600 text-center mt-2">
+                  Bạn chưa có hợp đồng thuê xe nào
+                </Text>
+              </View>
+            ) : (
+              <ScrollView className="flex-1 p-4">
+                {contracts.map((contract: any) => {
+                  const getStatusColor = (status: string) => {
+                    switch (status?.toLowerCase()) {
+                      case "paid":
+                        return "bg-green-100";
+                      case "pending":
+                        return "bg-yellow-100";
+                      case "cancelled":
+                        return "bg-red-100";
+                      default:
+                        return "bg-gray-100";
+                    }
+                  };
+
+                  const getStatusTextColor = (status: string) => {
+                    switch (status?.toLowerCase()) {
+                      case "paid":
+                        return "text-green-700";
+                      case "pending":
+                        return "text-yellow-700";
+                      case "cancelled":
+                        return "text-red-700";
+                      default:
+                        return "text-gray-700";
+                    }
+                  };
+
+                  const getStatusText = (status: string) => {
+                    switch (status?.toLowerCase()) {
+                      case "paid":
+                        return "Đã thanh toán";
+                      case "pending":
+                        return "Chờ thanh toán";
+                      case "cancelled":
+                        return "Đã hủy";
+                      default:
+                        return status;
+                    }
+                  };
+
+                  const formatContractDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+                  };
+
+                  return (
+                    <View
+                      key={contract.id}
+                      className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-4"
+                    >
+                      {/* Vehicle Info */}
+                      <View className="flex-row items-start p-4 border-b border-gray-100">
+                        <Image
+                          source={{ uri: contract.vehicle?.image }}
+                          className="w-20 h-20 rounded-xl bg-gray-100"
+                        />
+                        <View className="flex-1 ml-3">
+                          <Text className="font-bold text-base text-gray-900">
+                            {contract.vehicle?.name}
+                          </Text>
+                          <Text className="text-sm text-gray-600 mt-1">
+                            {contract.vehicle?.brand}
+                          </Text>
+                          <View className="mt-2">
+                            <View
+                              className={`self-start px-3 py-1 rounded-full ${getStatusColor(contract.status)}`}
+                            >
+                              <Text
+                                className={`text-xs font-semibold ${getStatusTextColor(contract.status)}`}
+                              >
+                                {getStatusText(contract.status)}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Booking Details */}
+                      <View className="p-4 space-y-2">
+                        <View className="flex-row items-center mb-2">
+                          <Ionicons
+                            name="person-outline"
+                            size={16}
+                            color="#6B7280"
+                          />
+                          <Text className="text-sm text-gray-700 ml-2">
+                            {contract.customer.fullName}
+                          </Text>
+                        </View>
+
+                        <View className="flex-row items-center mb-2">
+                          <Ionicons
+                            name="call-outline"
+                            size={16}
+                            color="#6B7280"
+                          />
+                          <Text className="text-sm text-gray-700 ml-2">
+                            {contract.customer.phone}
+                          </Text>
+                        </View>
+
+                        <View className="flex-row items-center mb-2">
+                          <Ionicons
+                            name="calendar-outline"
+                            size={16}
+                            color="#6B7280"
+                          />
+                          <Text className="text-sm text-gray-700 ml-2">
+                            {formatContractDate(contract.booking?.startDate)} -{" "}
+                            {formatContractDate(contract.booking?.endDate)}
+                          </Text>
+                        </View>
+
+                        {/* Documents Section */}
+                        {contract.documents && (
+                          <View className="mt-4 pt-4 border-t border-gray-100">
+                            <Text className="font-bold text-sm text-gray-900 mb-3">
+                              Giấy tờ đã nộp
+                            </Text>
+                            <View className="flex-row gap-2">
+                              {contract.documents.idFrontImage && (
+                                <View className="flex-1">
+                                  <Text className="text-xs text-gray-600 mb-1">
+                                    CCCD mặt trước
+                                  </Text>
+                                  <Image
+                                    source={{
+                                      uri: contract.documents.idFrontImage,
+                                    }}
+                                    className="w-full h-24 rounded-lg bg-gray-100"
+                                    resizeMode="cover"
+                                  />
+                                </View>
+                              )}
+                              {contract.documents.idBackImage && (
+                                <View className="flex-1">
+                                  <Text className="text-xs text-gray-600 mb-1">
+                                    CCCD mặt sau
+                                  </Text>
+                                  <Image
+                                    source={{
+                                      uri: contract.documents.idBackImage,
+                                    }}
+                                    className="w-full h-24 rounded-lg bg-gray-100"
+                                    resizeMode="cover"
+                                  />
+                                </View>
+                              )}
+                            </View>
+                            {contract.documents.licenseImage && (
+                              <View className="mt-2">
+                                <Text className="text-xs text-gray-600 mb-1">
+                                  Bằng lái xe
+                                </Text>
+                                <Image
+                                  source={{
+                                    uri: contract.documents.licenseImage,
+                                  }}
+                                  className="w-full h-24 rounded-lg bg-gray-100"
+                                  resizeMode="cover"
+                                />
+                              </View>
+                            )}
+                          </View>
+                        )}
+
+                        <View className="flex-row items-center mb-2">
+                          <Ionicons
+                            name="card-outline"
+                            size={16}
+                            color="#6B7280"
+                          />
+                          <Text className="text-sm text-gray-700 ml-2">
+                            CCCD: {contract.customer.cccdNumber || "N/A"}
+                          </Text>
+                        </View>
+
+                        <View className="flex-row items-center mb-2">
+                          <Ionicons
+                            name="document-outline"
+                            size={16}
+                            color="#6B7280"
+                          />
+                          <Text className="text-sm text-gray-700 ml-2">
+                            GPLX: {contract.customer.licenseNumber || "N/A"} (
+                            {contract.customer.licenseClass || "N/A"})
+                          </Text>
+                        </View>
+
+                        <View className="flex-row items-center justify-between pt-3 border-t border-gray-100 mt-2">
+                          <Text className="text-sm text-gray-600">
+                            Tổng tiền
+                          </Text>
+                          <Text className="text-lg font-bold text-pink-600">
+                            {contract.booking?.totalPrice?.toLocaleString()} đ
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-// Helper Components
+//Components
 const FeatureIcon = ({ icon, label, value, color, bg }: any) => (
   <View className="items-center">
     <View
@@ -315,41 +613,110 @@ const CalendarGrid = ({
   onSelectDay: (day: number) => void;
   selectedDate: number;
 }) => {
+  const [currentMonth, setCurrentMonth] = React.useState(new Date(date));
+
   const daysInMonth = new Date(
-    date.getFullYear(),
-    date.getMonth() + 1,
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() + 1,
     0,
   ).getDate();
-  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  const firstDay = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth(),
+    1,
+  ).getDay();
   const days = Array(firstDay === 0 ? 6 : firstDay - 1)
     .fill(null)
     .concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
 
+  const monthNames = [
+    "Tháng 1",
+    "Tháng 2",
+    "Tháng 3",
+    "Tháng 4",
+    "Tháng 5",
+    "Tháng 6",
+    "Tháng 7",
+    "Tháng 8",
+    "Tháng 9",
+    "Tháng 10",
+    "Tháng 11",
+    "Tháng 12",
+  ];
+
+  const goToPreviousMonth = () => {
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
+    );
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
+    );
+  };
+
   return (
-    <View className="flex-row flex-wrap">
-      {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => (
-        <Text
-          key={d}
-          className="w-[14.2%] text-center text-xs text-gray-400 mb-2"
-        >
-          {d}
-        </Text>
-      ))}
-      {days.map((day, i) => (
+    <View>
+      {/* Month/Year Header */}
+      <View className="flex-row items-center justify-between mb-4">
         <TouchableOpacity
-          key={i}
-          onPress={() => day && onSelectDay(day)}
-          className={`w-[14.2%] h-10 items-center justify-center rounded-lg ${day === selectedDate ? "bg-pink-600" : ""}`}
+          onPress={goToPreviousMonth}
+          className="p-2 rounded-lg bg-gray-100"
         >
-          <Text
-            className={
-              day === selectedDate ? "text-white font-bold" : "text-black"
-            }
-          >
-            {day || ""}
-          </Text>
+          <Ionicons name="chevron-back" size={20} color="#000" />
         </TouchableOpacity>
-      ))}
+        <Text className="text-base font-bold">
+          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </Text>
+        <TouchableOpacity
+          onPress={goToNextMonth}
+          className="p-2 rounded-lg bg-gray-100"
+        >
+          <Ionicons name="chevron-forward" size={20} color="#000" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Calendar */}
+      <View className="flex-row flex-wrap">
+        {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => (
+          <Text
+            key={d}
+            className="w-[14.2%] text-center text-xs text-gray-400 mb-2"
+          >
+            {d}
+          </Text>
+        ))}
+        {days.map((day, i) => {
+          const isSelected =
+            day === selectedDate &&
+            currentMonth.getMonth() === date.getMonth() &&
+            currentMonth.getFullYear() === date.getFullYear();
+
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => {
+                if (day) {
+                  const newDate = new Date(
+                    currentMonth.getFullYear(),
+                    currentMonth.getMonth(),
+                    day,
+                  );
+                  onSelectDay(day);
+                }
+              }}
+              className={`w-[14.2%] h-10 items-center justify-center rounded-lg ${isSelected ? "bg-pink-600" : ""}`}
+            >
+              <Text
+                className={isSelected ? "text-white font-bold" : "text-black"}
+              >
+                {day || ""}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 };

@@ -24,24 +24,22 @@ export default function AddCar() {
 
   const [loading, setLoading] = useState(false);
 
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
-  const [brand, setBrand] = useState("");
-  const [price, setPrice] = useState("");
-  const [desc, setDesc] = useState("");
-  const [locationId, setLocationId] = useState("hcm");
+  const [name, setName] = useState(""); // Tên xe
+  const [type, setType] = useState(""); // Loại xe
+  const [brand, setBrand] = useState(""); // Hãng xe
+  const [price, setPrice] = useState(""); // Giá thuê/ngày
+  const [desc, setDesc] = useState(""); // Mô tả
+  const [locationId, setLocationId] = useState("hcm"); // Vị trí
 
-  // EXTRA FIELDS
-  const [transmission, setTransmission] = useState("");
-  const [seats, setSeats] = useState("");
-  const [fuel, setFuel] = useState("");
-  const [year, setYear] = useState("");
-  const [plate, setPlate] = useState("");
-
-  // STATUS
-  const [status, setStatus] = useState<
-    "available" | "renting" | "maintenance"
-  >("available");
+  const [transmission, setTransmission] = useState(""); // Hộp số
+  const [seats, setSeats] = useState(""); // Số chỗ ngồi
+  const [fuel, setFuel] = useState(""); // Nhiên liệu
+  const [year, setYear] = useState(""); // Năm sản xuất
+  const [plate, setPlate] = useState(""); // Biển số
+  // Trạng thái xe
+  const [status, setStatus] = useState<"available" | "renting" | "maintenance">(
+    "available",
+  );
 
   const LOCATIONS = [
     { id: "hcm", name: "Hồ Chí Minh" },
@@ -84,7 +82,7 @@ export default function AddCar() {
     { id: "phutho", name: "Phú Thọ" },
     { id: "thaibinh", name: "Thái Bình" },
   ];
-
+  // State ảnh xe
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [subImage, setSubImage] = useState<string | null>(null);
 
@@ -121,7 +119,7 @@ export default function AddCar() {
         images: [mainUrl, subUrl],
 
         isAvailable: true,
-        status, // 👈 LƯU STATUS
+        status,
 
         locationId,
         transmission,
@@ -218,6 +216,38 @@ export default function AddCar() {
           })}
         </View>
 
+        {/* TRANSMISSION */}
+        <Text className="font-bold mb-3">Hộp số</Text>
+        <View className="flex-row mb-4">
+          {[
+            { id: "automatic", label: "Tự động" },
+            { id: "manual", label: "Số sàn" },
+            { id: "cvt", label: "CVT" },
+          ].map((item) => {
+            const active = transmission === item.id;
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => setTransmission(item.id)}
+                className={`flex-1 mr-2 p-3 rounded-xl border ${
+                  active
+                    ? "bg-pink-700 border-pink-700"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    active ? "text-white" : "text-gray-700"
+                  }`}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {/* PRICE */}
         <Text className="font-bold mb-2">Giá thuê/ngày *</Text>
         <TextInput
@@ -233,6 +263,75 @@ export default function AddCar() {
           className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4"
           value={plate}
           onChangeText={setPlate}
+        />
+
+        {/* LOCATION */}
+        <Text className="font-bold mb-2">Vị trí</Text>
+        <View className="flex-row flex-wrap mb-4">
+          {LOCATIONS.map((loc) => {
+            const active = locationId === loc.id;
+
+            return (
+              <TouchableOpacity
+                key={loc.id}
+                onPress={() => setLocationId(loc.id)}
+                className={`px-3 py-2 mr-2 mb-2 rounded-full border ${
+                  active
+                    ? "bg-pink-700 border-pink-700"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                <Text
+                  className={`text-sm ${
+                    active ? "text-white" : "text-gray-700"
+                  }`}
+                >
+                  {loc.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* SEATS */}
+        <Text className="font-bold mb-2">Số chỗ ngồi</Text>
+        <TextInput
+          className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4"
+          keyboardType="numeric"
+          value={seats}
+          onChangeText={setSeats}
+          placeholder="VD: 4"
+        />
+
+        {/* FUEL */}
+        <Text className="font-bold mb-2">Nhiên liệu</Text>
+        <TextInput
+          className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4"
+          value={fuel}
+          onChangeText={setFuel}
+          placeholder="VD: Xăng"
+        />
+
+        {/* YEAR */}
+        <Text className="font-bold mb-2">Năm sản xuất</Text>
+        <TextInput
+          className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4"
+          keyboardType="numeric"
+          value={year}
+          onChangeText={setYear}
+          placeholder="VD: 2022"
+        />
+
+        {/* DESCRIPTION */}
+        <Text className="font-bold mb-2">Mô tả</Text>
+        <TextInput
+          className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4"
+          value={desc}
+          onChangeText={setDesc}
+          placeholder="Mô tả ngắn về xe"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
         />
 
         {/* IMAGES */}

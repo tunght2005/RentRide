@@ -17,7 +17,7 @@ export function useVehicles(vehicles: any[]) {
     if (currentUser) {
       getUserProfile(currentUser.uid).then(setUser);
 
-      // 2. Lấy danh sách xe đang thuê (status: paid)
+      // Lấy danh sách xe đang thuê (status: paid)
       getPaidContracts(currentUser.uid).then((contracts) => {
         const activeVehicles = contracts.map((c) => ({
           ...c.vehicle,
@@ -60,7 +60,7 @@ export function useVehicles(vehicles: any[]) {
 
   const filteredVehicles = useMemo(() => {
     return vehicles.filter((v) => {
-      // 1. Ẩn xe nếu nó nằm trong danh sách đang thuê
+      // Ẩn xe nếu nó nằm trong danh sách đang thuê
       if (rentedVehicleIds.includes(v.id)) return false;
 
       const matchName =

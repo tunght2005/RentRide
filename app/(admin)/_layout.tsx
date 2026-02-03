@@ -2,14 +2,13 @@ import { Tabs } from "expo-router";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-// --- CẤU HÌNH ---
 const CONFIG = {
-  primary: "#8b5cf6", // Violet-500
-  inactive: "#71717a", // Zinc-500
-  barBg: "#18181b", // Zinc-900
+  primary: "#8b5cf6",
+  inactive: "#71717a",
+  barBg: "#18181b",
 };
 
-// 1. Nút Giữa (Giữ nguyên vì đã đẹp)
+// Nút Giữa
 const FloatingBookingButton = ({ onPress }: { onPress?: (e: any) => void }) => {
   return (
     <TouchableOpacity
@@ -34,7 +33,7 @@ const FloatingBookingButton = ({ onPress }: { onPress?: (e: any) => void }) => {
   );
 };
 
-// 2. Tab Thường (ĐÃ SỬA: Căn chỉnh lại vị trí)
+//Tab Thường
 const StandardTabIcon = ({
   focused,
   iconName,
@@ -45,8 +44,6 @@ const StandardTabIcon = ({
   label: string;
 }) => {
   return (
-    // FIX: Thêm top-[12px] để đẩy icon + text xuống giữa thanh bar 70px
-    // Bỏ mt-2 cũ đi để tránh bị đẩy lung tung
     <View className="items-center justify-center gap-1 top-[12px]">
       <Ionicons
         name={iconName}
@@ -69,7 +66,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarShowLabel: false,
 
-        // --- STYLE THANH BAR ---
+        // Navbar
         tabBarStyle: {
           position: "absolute",
           bottom: 25,
@@ -79,19 +76,15 @@ export default function TabsLayout() {
           borderRadius: 40,
           backgroundColor: CONFIG.barBg,
           borderTopWidth: 0,
-          paddingBottom: 0, // Quan trọng: Reset padding đáy để dễ tính toán
-
-          // Shadow
+          paddingBottom: 0,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 10 },
           shadowOpacity: 0.25,
           shadowRadius: 10,
           elevation: 5,
         },
-        // FIX: Đảm bảo item chiếm full chiều cao để không bị lệch click
         tabBarItemStyle: {
           height: 70,
-          // Trên iOS đôi khi cần padding top để override safe area
           paddingTop: 0,
         },
       }}

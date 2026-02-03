@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from "react-native";
 import { useState } from "react";
 import { router } from "expo-router";
@@ -23,38 +24,69 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationData, setNotificationData] = useState<{
+    title: string;
+    message: string;
+    type: "success" | "error";
+  }>({
+    title: "",
+    message: "",
+    type: "success",
+  });
 
-  // --- LOGIC GIỮ NGUYÊN 100% ---
   const handleRegister = async () => {
     if (loading) return;
 
     if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
+      setNotificationData({
+        title: "Thông tin không đầy đủ",
+        message: "Vui lòng nhập đầy đủ thông tin",
+        type: "error",
+      });
+      setShowNotification(true);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp");
+      setNotificationData({
+        title: "Mật khẩu không khớp",
+        message: "Mật khẩu xác nhận không khớp",
+        type: "error",
+      });
+      setShowNotification(true);
       return;
     }
 
     try {
       setLoading(true);
       await register({ email, password, fullName });
-      Alert.alert("Thành công", "Đăng ký thành công", [
-        {
-          text: "Vào trang chủ",
-          onPress: () => router.replace("/"),
-        },
-      ]);
+
+      // Hiển thị notification thành công
+      setNotificationData({
+        title: "Đăng ký thành công!",
+        message: `Chào mừng ${fullName}! Hãy đăng nhập để bắt đầu`,
+        type: "success",
+      });
+      setShowNotification(true);
+
+      // Delay 2 giây rồi redirect
+      setTimeout(() => {
+        router.replace("/(auth)/login");
+      }, 2000);
     } catch (e: any) {
-      Alert.alert("Lỗi", e.message || "Đăng ký thất bại");
+      setNotificationData({
+        title: "Đăng ký thất bại",
+        message: e.message || "Đăng ký thất bại",
+        type: "error",
+      });
+      setShowNotification(true);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper component để hiển thị Label kèm Icon
+  // component
   const InputLabel = ({
     icon,
     label,
@@ -70,7 +102,7 @@ export default function RegisterScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      {/* 1. Header Area với nút Back custom */}
+      {/* Header */}
       <SafeAreaView edges={["top"]} className="bg-white">
         <View className="px-6 py-2">
           <TouchableOpacity
@@ -82,7 +114,6 @@ export default function RegisterScreen() {
         </View>
       </SafeAreaView>
 
-      {/* 2. KeyboardAvoidingView: Chống bàn phím che form */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -92,7 +123,7 @@ export default function RegisterScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
           className="px-6"
         >
-          {/* Hero Icon & Title */}
+          {/*Title */}
           <View className="items-center mb-8 mt-2">
             <View className="w-20 h-20 bg-violet-100 rounded-full items-center justify-center mb-4 border-4 border-violet-50">
               <Ionicons name="person-add" size={32} color="#7c3aed" />
@@ -105,7 +136,7 @@ export default function RegisterScreen() {
             </Text>
           </View>
 
-          {/* Form Inputs Group */}
+          {/* Form  */}
           <View className="space-y-5">
             {/* Full Name */}
             <View>
@@ -162,7 +193,7 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* Footer Link */}
+          {/* Footer*/}
           <View className="flex-row justify-center items-center pb-6">
             <Text className="text-gray-500">Đã có tài khoản? </Text>
             <TouchableOpacity onPress={() => router.back()}>
@@ -171,6 +202,86 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Notification Modal */}
+      <Modal
+        visible={showNotification}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNotification(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View
+            className={`w-80 p-6 rounded-3xl shadow-2xl ${
+              notificationData.type === "success"
+                ? "bg-gradient-to-br from-green-50 to-emerald-50"
+                : "bg-gradient-to-br from-red-50 to-orange-50"
+            }`}
+          >
+            {/* Icon */}
+            <View
+              className={`w-16 h-16 rounded-full ${
+                notificationData.type === "success"
+                  ? "bg-green-100"
+                  : "bg-red-100"
+              } items-center justify-center mb-4 self-center`}
+            >
+              <Ionicons
+                name={
+                  notificationData.type === "success"
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
+                size={40}
+                color={
+                  notificationData.type === "success" ? "#10B981" : "#EF4444"
+                }
+              />
+            </View>
+
+            {/* Title */}
+            <Text
+              className={`text-xl font-bold text-center mb-2 ${
+                notificationData.type === "success"
+                  ? "text-green-900"
+                  : "text-red-900"
+              }`}
+            >
+              {notificationData.title}
+            </Text>
+
+            {/* Message */}
+            <Text
+              className={`text-center text-sm leading-6 ${
+                notificationData.type === "success"
+                  ? "text-green-700"
+                  : "text-red-700"
+              }`}
+            >
+              {notificationData.message}
+            </Text>
+
+            {/* Loading */}
+            {notificationData.type === "success" && (
+              <View className="mt-6 items-center">
+                <View className="w-8 h-8 rounded-full border-4 border-green-300 border-t-green-600 animate-spin" />
+                <Text className="text-xs text-green-600 mt-3 font-medium">
+                  Đang chuyển hướng...
+                </Text>
+              </View>
+            )}
+
+            {notificationData.type === "error" && (
+              <TouchableOpacity
+                onPress={() => setShowNotification(false)}
+                className="mt-6 bg-red-600 py-3 rounded-2xl"
+              >
+                <Text className="text-white font-bold text-center">Đóng</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

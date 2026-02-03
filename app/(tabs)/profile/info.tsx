@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "../../../hooks/useUser";
 import { useAuth } from "../../../hooks/useAuth";
 
-// Component con để hiển thị từng dòng thông tin (giúp code gọn hơn)
+// Component
 const InfoItem = ({
   icon,
   label,
@@ -25,7 +25,7 @@ const InfoItem = ({
   value: string | null | undefined;
   isLast?: boolean;
 }) => {
-  if (!value) return null; // Nếu không có dữ liệu thì ẩn luôn dòng đó
+  if (!value) return null;
 
   return (
     <View
@@ -51,7 +51,7 @@ export default function ProfileInfoScreen() {
   const { user } = useAuth();
   const { profile, loading } = useUser(user);
 
-  // 1. Loading State đẹp hơn
+  //Loading
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
@@ -70,7 +70,7 @@ export default function ProfileInfoScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-6 pb-10">
-          {/* --- PHẦN 1: AVATAR --- */}
+          {/* AVATAR*/}
           <View className="items-center py-8">
             <View className="relative">
               <Image
@@ -81,7 +81,6 @@ export default function ProfileInfoScreen() {
                 }}
                 className="w-28 h-28 rounded-full border-4 border-gray-50"
               />
-              {/* Nút nhỏ giả lập edit avatar */}
               <View className="absolute bottom-0 right-0 bg-gray-900 p-2 rounded-full border-2 border-white">
                 <Ionicons name="camera" size={16} color="white" />
               </View>
@@ -103,13 +102,13 @@ export default function ProfileInfoScreen() {
             </View>
           </View>
 
-          {/* --- PHẦN 2: FORM THÔNG TIN --- */}
+          {/*FORM THÔNG TIN  */}
           <View className="bg-white">
             <Text className="text-lg font-bold text-gray-900 mb-2">
               Chi tiết
             </Text>
 
-            {/* Khung chứa thông tin */}
+            {/*thông tin */}
             <View className="bg-gray-50 rounded-2xl px-4 border border-gray-100">
               <InfoItem
                 icon="person-outline"
@@ -130,7 +129,7 @@ export default function ProfileInfoScreen() {
             </View>
           </View>
 
-          {/* --- PHẦN 3: ACTION BUTTON --- */}
+          {/* BUTTON  */}
           <View className="mt-8">
             <TouchableOpacity
               activeOpacity={0.8}

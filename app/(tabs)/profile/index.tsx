@@ -5,7 +5,6 @@ import {
   Pressable,
   Image,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
@@ -14,13 +13,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../../../hooks/useAuth";
 import { useUser } from "../../../hooks/useUser";
-import { Button } from "../../../components/common/Button";
 
 export default function ProfileScreen() {
   const { user, loading: authLoading, logout } = useAuth();
   const { profile, loading: profileLoading } = useUser(user);
 
-  // ⏳ Loading (chỉ để hiển thị UI)
+  // Loading
   if (authLoading || profileLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
@@ -29,7 +27,7 @@ export default function ProfileScreen() {
     );
   }
 
-  // 🔒 Không có user → index.tsx sẽ redirect
+  // Không có user → index.tsx sẽ redirect
   if (!user) return null;
 
   const fullName =
@@ -39,21 +37,6 @@ export default function ProfileScreen() {
     "Người dùng";
 
   const isAdmin = profile?.role === "admin";
-
-  // ✅ LOGOUT CHUẨN – KHÔNG CHỜ useEffect
-  // const handleLogout = () => {
-  //   Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-  //     { text: "Hủy", style: "cancel" },
-  //     {
-  //       text: "Đăng xuất",
-  //       style: "destructive",
-  //       onPress: async () => {
-  //         await logout();
-  //         router.replace("/(auth)/login");
-  //       },
-  //     },
-  //   ]);
-  // };
 
   const MENU_ITEMS = [
     {
@@ -66,7 +49,7 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      {/* Header background */}
+      {/* Header */}
       <View className="absolute top-0 left-0 right-0 h-48 bg-violet-600 rounded-b-[40px]" />
 
       <SafeAreaView className="flex-1">
@@ -74,12 +57,12 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {/* Header title */}
+          {/* Header */}
           <View className="px-6 pt-2 pb-6">
             <Text className="text-2xl font-bold text-white">Hồ sơ cá nhân</Text>
           </View>
 
-          {/* User Card */}
+          {/* User */}
           <View className="mx-5 p-5 bg-white rounded-3xl flex-row items-center shadow-sm shadow-black/10">
             <Image
               source={{
@@ -140,28 +123,22 @@ export default function ProfileScreen() {
                     color={item.color}
                   />
                 </View>
-
                 <Text className="flex-1 text-base text-gray-700 font-medium">
                   {item.label}
                 </Text>
-
                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
               </Pressable>
             ))}
           </View>
 
           {/* Logout */}
-          {/* Logout */}
           <Pressable
             onPress={async () => {
-              // ✅ Giữ nguyên logic của bạn
               await logout();
               router.replace("/(auth)/login");
             }}
-            // Style mới: Nền trắng, khi bấm hơi mờ đi, có đổ bóng nhẹ
             className="bg-white p-1 rounded-3xl shadow-sm shadow-gray-200 active:opacity-60 m-10 my-30"
           >
-            {/* Bên trong là khung màu đỏ nhạt để cảnh báo đây là nút thoát */}
             <View className="flex-row items-center justify-center py-4 bg-red-50 rounded-[20px] border border-red-100">
               <Ionicons name="log-out-outline" size={22} color="#ef4444" />
               <Text className="text-red-500 font-bold text-base ml-2">

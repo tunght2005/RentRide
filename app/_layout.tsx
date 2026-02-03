@@ -11,7 +11,6 @@ import "../global.css";
 // eslint-disable-next-line import/no-unresolved
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
-// Tạm thời ẩn cảnh báo pointerEvents từ các thư viện bên thứ ba
 const originalWarn = console.warn;
 console.warn = (...args) => {
   if (

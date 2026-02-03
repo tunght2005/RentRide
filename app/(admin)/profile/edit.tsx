@@ -43,7 +43,6 @@ export default function EditProfileScreen() {
         avatar: avatarUrl,
       });
 
-      // Chỉ đổi mật khẩu cho email/password
       if (
         newPassword.length >= 6 &&
         user?.providerData[0]?.providerId === "password"

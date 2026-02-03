@@ -43,9 +43,9 @@ export default function EditCar() {
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [subImage, setSubImage] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<
-    "available" | "renting" | "maintenance"
-  >("available");
+  const [status, setStatus] = useState<"available" | "renting" | "maintenance">(
+    "available",
+  );
 
   const LOCATIONS = [
     { id: "hcm", name: "Hồ Chí Minh" },
@@ -170,7 +170,7 @@ export default function EditCar() {
         fuel,
         year: year ? Number(year) : null,
         plate,
-        status, // 👈 status được lưu
+        status,
         images: subUrl ? [mainUrl, subUrl] : [mainUrl],
         updatedAt: serverTimestamp(),
       });
@@ -187,7 +187,11 @@ export default function EditCar() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={handleSave} disabled={loading} className="mr-4">
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={loading}
+          className="mr-4"
+        >
           {loading ? (
             <ActivityIndicator />
           ) : (
@@ -213,13 +217,126 @@ export default function EditCar() {
         contentContainerStyle={{ paddingBottom: tabBarHeight + 40 }}
       >
         <Text className="font-bold mb-2">Tên xe *</Text>
-        <TextInput className="bg-white border rounded-xl px-4 py-3 mb-4" value={name} onChangeText={setName} />
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={name}
+          onChangeText={setName}
+        />
 
         <Text className="font-bold mb-2">Loại xe</Text>
-        <TextInput className="bg-white border rounded-xl px-4 py-3 mb-4" value={type} onChangeText={setType} />
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={type}
+          onChangeText={setType}
+        />
 
         <Text className="font-bold mb-2">Thương hiệu</Text>
-        <TextInput className="bg-white border rounded-xl px-4 py-3 mb-4" value={brand} onChangeText={setBrand} />
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={brand}
+          onChangeText={setBrand}
+        />
+
+        {/* LOCATION */}
+        <Text className="font-bold mb-2">Vị trí</Text>
+        <View className="flex-row flex-wrap mb-4">
+          {LOCATIONS.map((loc) => {
+            const active = locationId === loc.id;
+
+            return (
+              <TouchableOpacity
+                key={loc.id}
+                onPress={() => setLocationId(loc.id)}
+                className={`px-3 py-2 mr-2 mb-2 rounded-full border ${
+                  active
+                    ? "bg-pink-700 border-pink-700"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                <Text
+                  className={`text-sm ${
+                    active ? "text-white" : "text-gray-700"
+                  }`}
+                >
+                  {loc.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* TRANSMISSION */}
+        <Text className="font-bold mb-3">Hộp số</Text>
+        <View className="flex-row mb-4">
+          {[
+            { id: "automatic", label: "Tự động" },
+            { id: "manual", label: "Số sàn" },
+            { id: "cvt", label: "CVT" },
+          ].map((item) => {
+            const active = transmission === item.id;
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => setTransmission(item.id)}
+                className={`flex-1 mr-2 p-3 rounded-xl border ${
+                  active
+                    ? "bg-pink-700 border-pink-700"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    active ? "text-white" : "text-gray-700"
+                  }`}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* SEATS */}
+        <Text className="font-bold mb-2">Số chỗ ngồi</Text>
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          keyboardType="numeric"
+          value={seats}
+          onChangeText={setSeats}
+          placeholder="VD: 4"
+        />
+
+        {/* FUEL */}
+        <Text className="font-bold mb-2">Nhiên liệu</Text>
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={fuel}
+          onChangeText={setFuel}
+          placeholder="VD: Xăng"
+        />
+
+        {/* YEAR */}
+        <Text className="font-bold mb-2">Năm sản xuất</Text>
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          keyboardType="numeric"
+          value={year}
+          onChangeText={setYear}
+          placeholder="VD: 2022"
+        />
+
+        {/* DESCRIPTION */}
+        <Text className="font-bold mb-2">Mô tả</Text>
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={desc}
+          onChangeText={setDesc}
+          placeholder="Mô tả ngắn về xe"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
 
         {/* STATUS */}
         <Text className="font-bold mb-3">Trạng thái xe</Text>
@@ -252,22 +369,49 @@ export default function EditCar() {
             );
           })}
         </View>
-
-        {/* Các field khác giữ nguyên */}
         <Text className="font-bold mb-2">Biển số</Text>
-        <TextInput className="bg-white border rounded-xl px-4 py-3 mb-4" value={plate} onChangeText={setPlate} />
+        <TextInput
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={plate}
+          onChangeText={setPlate}
+        />
 
         <Text className="font-bold mb-2">Giá</Text>
-        <TextInput keyboardType="numeric" className="bg-white border rounded-xl px-4 py-3 mb-4" value={price} onChangeText={setPrice} />
+        <TextInput
+          keyboardType="numeric"
+          className="bg-white border rounded-xl px-4 py-3 mb-4"
+          value={price}
+          onChangeText={setPrice}
+        />
 
         <Text className="font-bold mb-2">Ảnh chính</Text>
-        <TouchableOpacity onPress={() => pickImage(setMainImage)} className="border border-dashed rounded-xl h-36 bg-white justify-center items-center">
-          {mainImage ? <Image source={{ uri: mainImage }} className="w-full h-full rounded-xl" /> : <UploadUI />}
+        <TouchableOpacity
+          onPress={() => pickImage(setMainImage)}
+          className="border border-dashed rounded-xl h-36 bg-white justify-center items-center"
+        >
+          {mainImage ? (
+            <Image
+              source={{ uri: mainImage }}
+              className="w-full h-full rounded-xl"
+            />
+          ) : (
+            <UploadUI />
+          )}
         </TouchableOpacity>
 
         <Text className="font-bold mt-4 mb-2">Ảnh phụ</Text>
-        <TouchableOpacity onPress={() => pickImage(setSubImage)} className="border border-dashed rounded-xl h-36 bg-white justify-center items-center">
-          {subImage ? <Image source={{ uri: subImage }} className="w-full h-full rounded-xl" /> : <UploadUI />}
+        <TouchableOpacity
+          onPress={() => pickImage(setSubImage)}
+          className="border border-dashed rounded-xl h-36 bg-white justify-center items-center"
+        >
+          {subImage ? (
+            <Image
+              source={{ uri: subImage }}
+              className="w-full h-full rounded-xl"
+            />
+          ) : (
+            <UploadUI />
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>

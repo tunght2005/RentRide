@@ -1,9 +1,8 @@
-import { User, getAuth  } from "firebase/auth";
+import { User, getAuth } from "firebase/auth";
 import {
   collection,
   doc,
   deleteDoc,
-  setDoc,
   getDoc,
   getDocs,
   getFirestore,
@@ -12,11 +11,11 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
-  where,orderBy,
-
-    updateDoc,
-    where,
+  where,
+  orderBy,
   onSnapshot,
+  addDoc,
+  limit,
 } from "firebase/firestore";
 import { firebaseApp } from "./config";
 
@@ -45,9 +44,7 @@ export interface ContractData {
     licensePlate: string;
   };
 }
-/**
- * ✅ TẠO PROFILE CHO GOOGLE USER (NẾU CHƯA TỒN TẠI)
- */
+// TẠO PROFILE CHO GOOGLE USER nếu chưa tồn tại
 export async function createOrUpdateGoogleUser(user: User) {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
@@ -64,9 +61,7 @@ export async function createOrUpdateGoogleUser(user: User) {
   }
 }
 
-/**
- * ✅ TẠO PROFILE CHO USER ĐĂNG KÝ MỚI
- */
+// TẠO PROFILE CHO new USER
 export async function createUserProfile(user: {
   uid: string;
   email: string;
@@ -105,6 +100,10 @@ export async function getAllVehicles() {
   const snap = await getDocs(collection(db, "vehicles"));
 
   return snap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}
 // add vihicle
 export async function addVehicle(data: {
   name: string;
@@ -119,14 +118,13 @@ export async function addVehicle(data: {
   locationId: string;
   createAt?: any;
   updatedAt?: any;
-  transmission?: string; // Hộp số
-  seats?: number;        // Số chỗ
-  fuel?: string;         // Nhiên liệu
-  year?: number;         // Năm sản xuất
-  plate?: string;        // Biển số
-  status?: string;      // Trạng thái xe
-}) 
-{
+  transmission?: string;
+  seats?: number;
+  fuel?: string;
+  year?: number;
+  plate?: string;
+  status?: string;
+}) {
   const ref = await addDoc(collection(db, "vehicles"), {
     ...data,
     totalReviews: 0,
@@ -137,7 +135,6 @@ export async function addVehicle(data: {
 
   return ref.id;
 }
-
 
 export async function getVehicles() {
   const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"));
@@ -152,48 +149,6 @@ export async function getVehicles() {
 // Lấy xe id xe
 export async function getVehicleById(id: string) {
   const ref = doc(db, "vehicles", id);
-
-
-export async function deleteVehicle(id: string) {
-  const ref = doc(db, "vehicles", id);
-  await deleteDoc(ref);
-}
-// 🔥 Đếm tổng số xe (1 lần)
-export async function getTotalVehicles() {
-  const snapshot = await getDocs(collection(db, "vehicles"));
-  return snapshot.size;
-}
-
-// 🔥 Realtime tổng số xe
-export function listenTotalVehicles(callback: (total: number) => void) {
-  return onSnapshot(collection(db, "vehicles"), (snapshot) => {
-    callback(snapshot.size);
-  });
-}
-
-export const listenLatestVehicles = (callback: (data: any[]) => void) => {
-  const q = query(
-    collection(db, "vehicles"),
-    orderBy("createdAt", "desc")
-  );
-
-  return onSnapshot(q, (snapshot) => {
-    const data = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    callback(data.slice(0, 5)); // lấy 5 xe mới nhất
-  });
-}
-
-// ===============================
-// 📄 ORDER – TRANG INFO
-// ===============================
-
-// Lấy chi tiết 1 đơn thuê xe
-export async function getOrderById(orderId: string) {
-  const ref = doc(db, "orders", orderId);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return null;
@@ -202,6 +157,38 @@ export async function getOrderById(orderId: string) {
     id: snap.id,
     ...snap.data(),
   };
+}
+
+export async function deleteVehicle(id: string) {
+  try {
+    const ref = doc(db, "vehicles", id);
+
+    // Kiểm tra xe có tồn tại không
+    const vehicleDoc = await getDoc(ref);
+    if (!vehicleDoc.exists()) {
+      throw new Error("Xe không tồn tại");
+    }
+
+    await deleteDoc(ref);
+    console.log("Xóa xe thành công:", id);
+    return { success: true, message: "Xóa xe thành công" };
+  } catch (error: any) {
+    console.error("Lỗi xóa xe:", error.message);
+    throw new Error(error.message || "Không thể xóa xe. Kiểm tra quyền admin.");
+  }
+}
+// Đếm tổng số xe
+export async function getTotalVehicles() {
+  const snapshot = await getDocs(collection(db, "vehicles"));
+  return snapshot.size;
+}
+
+// Realtime tổng số xe
+export function listenTotalVehicles(callback: (total: number) => void) {
+  return onSnapshot(collection(db, "vehicles"), (snapshot) => {
+    callback(snapshot.size);
+  });
+}
 
 // Lấy dữ liệu từ collection contracts
 export async function getUserBookings(uid: string) {
@@ -239,9 +226,7 @@ export async function getPaidContracts(uid: string) {
   }
 }
 
-/**
- * ✅ LƯU HỢP ĐỒNG VÀO FIREBASE
- */
+// LƯU HỢP ĐỒNG VÀO FIREBASE
 export async function saveContract(
   userId: string,
   orderId: string,
@@ -257,9 +242,7 @@ export async function saveContract(
   });
 }
 
-/**
- * ✅ CẬP NHẬT TRẠNG THÁI HỢP ĐỒNG
- */
+// CẬP NHẬT TRẠNG THÁI HỢP ĐỒNG
 export async function updateContractStatus(
   orderId: string,
   status: "pending" | "paid" | "active" | "completed" | "cancelled",
@@ -270,65 +253,9 @@ export async function updateContractStatus(
   });
 }
 
-/**
- * ✅ LẤY HỢP ĐỒNG THEO ORDER ID
- */
-export async function getContractByOrderId(orderId: string) {
+// LẤY HỢP ĐỒNG THEO ORDER ID
+export async function getContractByOrderId(orderId: string): Promise<any> {
   const ref = doc(db, "contracts", orderId);
-
-// Realtime theo dõi đơn thuê (dùng cho trang admin duyệt hồ sơ)
-export function listenOrderById(
-  orderId: string,
-  callback: (data: any) => void
-) {
-  const ref = doc(db, "orders", orderId);
-
-  return onSnapshot(ref, (snap) => {
-    if (snap.exists()) {
-      callback({
-        id: snap.id,
-        ...snap.data(),
-      });
-    }
-  });
-}
-
-// Admin duyệt hồ sơ
-export async function approveOrder(orderId: string) {
-  await updateDoc(doc(db, "orders", orderId), {
-    "documents.status": "approved",
-    "documents.updatedAt": serverTimestamp(),
-  });
-}
-
-// Admin từ chối hồ sơ
-export async function rejectOrder(orderId: string, reason: string) {
-  await updateDoc(doc(db, "orders", orderId), {
-    "documents.status": "rejected",
-    "documents.rejectReason": reason,
-    "documents.updatedAt": serverTimestamp(),
-  });
-}
-
-// Realtime danh sách đơn thuê (Dashboard)
-export function listenLatestOrders(callback: (data: any[]) => void) {
-  const q = query(
-    collection(db, "orders"),
-    orderBy("booking.createdAt", "desc")
-  );
-
-  return onSnapshot(q, (snapshot) => {
-    const data = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    callback(data);
-  });
-}
-
-export async function getVehicleById(id: string) {
-  const ref = doc(db, "vehicles", id);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return null;
@@ -339,9 +266,7 @@ export async function getVehicleById(id: string) {
   };
 }
 
-/**
- * ✅ LẤY TẤT CẢ HỢP ĐỒNG CỦA USER
- */
+// LẤY TẤT CẢ HỢP ĐỒNG CỦA USER
 export async function getContractsByUser(userId: string) {
   const q = query(collection(db, "contracts"), where("userId", "==", userId));
   const snap = await getDocs(q);
@@ -352,3 +277,51 @@ export async function getContractsByUser(userId: string) {
   }));
 }
 
+// DOANH THU (CONTRACTS ĐƯỢC THANH TOÁN)
+export function listenTotalRevenue(callback: (total: number) => void) {
+  const q = query(collection(db, "contracts"));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      let total = 0;
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        total += data.booking?.totalPrice || 0;
+      });
+      callback(total);
+    },
+    (error) => {
+      console.error("listenTotalRevenue error:", error);
+      callback(0);
+    },
+  );
+}
+
+// DANH SÁCH HỢP ĐỒNG GẦN ĐÂY
+export function listenLatestContracts(
+  callback: (data: any[]) => void,
+  limitCount: number = 5,
+) {
+  const q = query(
+    collection(db, "contracts"),
+    orderBy("createdAt", "desc"),
+    limit(limitCount),
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      callback(data);
+    },
+    (error) => {
+      console.error("listenLatestContracts error:", error);
+      callback([]);
+    },
+  );
+}

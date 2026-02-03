@@ -1,33 +1,35 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   listenTotalVehicles,
-  listenLatestVehicles,
+  listenTotalRevenue,
+  listenLatestContracts,
 } from "../../../lib/firebase/firestore";
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [totalVehicles, setTotalVehicles] = useState<number | null>(null);
-  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [contracts, setContracts] = useState<any[]>([]);
 
-  // 🔥 realtime tổng số xe
+  // tổng số xe
   useEffect(() => {
     const unsubscribe = listenTotalVehicles(setTotalVehicles);
     return unsubscribe;
   }, []);
 
-  // 🔥 realtime 5 xe mới nhất
+  // tổng doanh thu
   useEffect(() => {
-    const unsubscribe = listenLatestVehicles((data) => {
-      setVehicles(data);
+    const unsubscribe = listenTotalRevenue(setTotalRevenue);
+    return unsubscribe;
+  }, []);
+
+  // hợp đồng
+  useEffect(() => {
+    const unsubscribe = listenLatestContracts((data) => {
+      setContracts(data);
     });
     return unsubscribe;
   }, []);
@@ -44,14 +46,6 @@ export default function DashboardScreen() {
             title="Tổng số xe"
             value={totalVehicles === null ? "..." : totalVehicles}
           />
-
-          <StatBox
-            icon="calendar-outline"
-            bg="bg-blue-100"
-            iconColor="#3b82f6"
-            title="Xe đang hiển thị"
-            value={vehicles.length}
-          />
         </View>
 
         {/* Doanh thu */}
@@ -62,45 +56,46 @@ export default function DashboardScreen() {
           <View className="ml-4">
             <Text className="text-gray-500">Doanh thu</Text>
             <Text className="text-2xl font-bold text-green-500">
-              20.700.000 đ
+              {totalRevenue.toLocaleString()} đ
             </Text>
           </View>
         </View>
 
         {/* Xe gần đây */}
         <Text className="text-lg font-semibold mt-6 mb-2">
-          Xe mới thêm gần đây
+          Hợp đồng mới gần đây
         </Text>
 
-        {vehicles.length === 0 && (
-          <Text className="text-gray-400 text-center mt-4">
-            Chưa có xe nào
-          </Text>
+        {contracts.length === 0 && (
+          <Text className="text-gray-400 text-center mt-4">Chưa có xe nào</Text>
         )}
 
-        {vehicles.map((item) => (
+        {contracts.map((item) => (
           <OrderItem
             key={item.id}
-            title={item.name}
-            user={item.brand}
-            image={item.images?.[0] || item.image}
-            price={item.price?.toLocaleString() + " đ"}
+            title={item.vehicle?.name || "N/A"}
+            user={item.vehicle?.brand || "N/A"}
+            image={item.vehicle?.image}
+            price={item.booking?.totalPrice?.toLocaleString() + " đ" || "0 đ"}
             status={
-              item.status === "renting"
+              item.status === "paid"
                 ? "Đang thuê"
-                : item.status === "maintenance"
-                ? "Bảo trì"
-                : "Sẵn sàng"
+                : item.status === "pending"
+                  ? "Chưa thanh toán"
+                  : "Huỷ"
             }
             statusStyle={
-              item.status === "renting"
-                ? "bg-red-100 text-red-600"
-                : item.status === "maintenance"
-                ? "bg-yellow-100 text-yellow-600"
-                : "bg-green-100 text-green-600"
+              item.status === "paid"
+                ? "bg-green-100 text-green-600"
+                : item.status === "pending"
+                  ? "bg-yellow-100 text-yellow-600"
+                  : "bg-gray-100 text-gray-600"
             }
             onPress={() =>
-              router.push(`../admin/vehicles/${item.id}`)
+              router.push({
+                pathname: "[id]",
+                params: { id: item.id },
+              })
             }
           />
         ))}
@@ -111,7 +106,7 @@ export default function DashboardScreen() {
   );
 }
 
-/* ================= COMPONENT ================= */
+/* COMPONENT */
 
 function StatBox({ icon, bg, iconColor, title, value }: any) {
   return (
@@ -144,9 +139,7 @@ function OrderItem({
     >
       <Image
         source={{
-          uri:
-            image ||
-            "https://via.placeholder.com/150",
+          uri: image || "https://via.placeholder.com/150",
         }}
         className="w-14 h-14 rounded-xl"
         resizeMode="cover"

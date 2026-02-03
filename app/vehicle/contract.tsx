@@ -9,6 +9,7 @@ import {
   Image,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -60,6 +61,47 @@ export default function ContractScreen() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { createPayment } = usePaymentLink();
 
+  // Kiểm tra thanh toán thành công khi quay lại trang (Real-time với window focus)
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const checkPaymentStatus = () => {
+      const paymentSuccess = localStorage.getItem("payment_success");
+
+      if (paymentSuccess === "true") {
+        // Hiển thị thông báo
+        Alert.alert(
+          "Thanh toán thành công! 🎉",
+          "Hợp đồng của bạn đã được xác nhận và lưu vào hệ thống.",
+          [
+            {
+              text: "Về trang chủ",
+              onPress: () => {
+                localStorage.removeItem("payment_success");
+                router.replace("/");
+              },
+            },
+          ],
+        );
+      }
+    };
+
+    // Check ngay khi mount
+    checkPaymentStatus();
+
+    // Listen window focus event - khi tab được focus lại sau khi payment-success đóng
+    const handleFocus = () => {
+      checkPaymentStatus();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
   useEffect(() => {
     if (!params.startDate || !params.endDate) return;
 
@@ -102,39 +144,39 @@ export default function ContractScreen() {
   };
 
   // FPT.AI OCR function - tự động điền thông tin từ ảnh
-  const extractDataFromImage = async (
-    imageUri: string,
-    documentType: "idFront" | "idBack" | "license",
-  ) => {
-    try {
-      setIsProcessingOCR(true);
+  // const extractDataFromImage = async (
+  //   imageUri: string,
+  //   documentType: "idFront" | "idBack" | "license",
+  // ) => {
+  //   try {
+  //     setIsProcessingOCR(true);
 
-      // Convert image to base64
-      const imageBase64 = await convertImageToBase64(imageUri);
+  //     // Convert image to base64
+  //     const imageBase64 = await convertImageToBase64(imageUri);
 
-      // Call FPT.AI Vision API
-      const extractedData = await extractDataFromFPTAI(
-        imageBase64,
-        documentType,
-      );
+  //     // Call FPT.AI Vision API
+  //     const extractedData = await extractDataFromFPTAI(
+  //       imageBase64,
+  //       documentType,
+  //     );
 
-      // Auto-fill user data
-      setUserData((prev: any) => ({
-        ...prev,
-        ...extractedData,
-      }));
+  //     // Auto-fill user data
+  //     setUserData((prev: any) => ({
+  //       ...prev,
+  //       ...extractedData,
+  //     }));
 
-      Alert.alert("Thành công", "Thông tin đã được tự động điền từ ảnh");
-    } catch (error: any) {
-      console.error("OCR Error:", error);
-      Alert.alert(
-        "Lỗi",
-        error.message || "Không thể nhận diện ảnh. Vui lòng thử lại.",
-      );
-    } finally {
-      setIsProcessingOCR(false);
-    }
-  };
+  //     Alert.alert("Thành công", "Thông tin đã được tự động điền từ ảnh");
+  //   } catch (error: any) {
+  //     console.error("OCR Error:", error);
+  //     Alert.alert(
+  //       "Lỗi",
+  //       error.message || "Không thể nhận diện ảnh. Vui lòng thử lại.",
+  //     );
+  //   } finally {
+  //     setIsProcessingOCR(false);
+  //   }
+  // };
   //Thanh toán
   const handleContinue = async () => {
     try {
@@ -188,7 +230,12 @@ export default function ContractScreen() {
 
       const paymentUrl = await createPayment(contractPayload);
       setIsProcessingPayment(false);
-      Linking.openURL(paymentUrl);
+
+      if (typeof window !== "undefined") {
+        window.location.replace(paymentUrl);
+      } else {
+        Linking.openURL(paymentUrl);
+      }
     } catch (e) {
       setIsProcessingPayment(false);
       console.error("Payment error:", e);
@@ -196,33 +243,6 @@ export default function ContractScreen() {
     }
   };
 
-  // Helper to process the selected image (OCR and upload)
-  // const handleImageSelection = async (
-  //   imageUri: string,
-  //   documentType: "idFront" | "idBack" | "license",
-  // ) => {
-  //   // Step 1: Perform OCR on the local image.
-  //   // This function shows its own loading spinner ("Đang nhận diện...").
-  //   await extractDataFromImage(imageUri, documentType);
-
-  //   // Step 2: Upload the image to Cloudinary.
-  //   try {
-  //     setIsUploadingImage(true); // Show "Đang tải ảnh lên..." spinner
-  //     const uploadedUrl = await uploadImageToCloudinary(imageUri);
-
-  //     if (documentType === "idFront") {
-  //       setIdFrontImage(uploadedUrl);
-  //     } else if (documentType === "idBack") {
-  //       setIdBackImage(uploadedUrl);
-  //     } else {
-  //       setLicenseImage(uploadedUrl);
-  //     }
-  //   } catch (error: any) {
-  //     Alert.alert("Lỗi upload", error.message || "Upload ảnh thất bại");
-  //   } finally {
-  //     setIsUploadingImage(false);
-  //   }
-  // };
   const handleImageSelection = async (
     imageUri: string,
     documentType: "idFront" | "idBack" | "license",
@@ -264,12 +284,11 @@ export default function ContractScreen() {
     }
   };
 
-  // Show options to pick or take a photo
   const handleUploadDocument = async (
     documentType: "idFront" | "idBack" | "license",
   ) => {
     try {
-      const imageUri = await pickImage(); // WEB: mở file picker
+      const imageUri = await pickImage();
       if (!imageUri) return;
 
       await handleImageSelection(imageUri, documentType);
@@ -284,8 +303,8 @@ export default function ContractScreen() {
       userData?.phone?.trim() &&
       userData?.address?.trim() &&
       userData?.cccdNumber?.trim() &&
-      idFrontImage && // ảnh CCCD mặt trước
-      licenseImage && // ảnh GPLX
+      idFrontImage &&
+      licenseImage &&
       agreedToTerms
     );
   };
@@ -370,7 +389,7 @@ export default function ContractScreen() {
         </View>
 
         <View className="px-4">
-          {/* PERSONAL INFORMATION SECTION */}
+          {/* INFORMATION  */}
           <View className="mb-8">
             <View className="flex-row items-center gap-2 mb-6">
               <Ionicons name="person" size={24} color="#EC4899" />
@@ -539,7 +558,7 @@ export default function ContractScreen() {
                   value={userData?.licenseNumber || ""}
                   onChangeText={(text) =>
                     setUserData((prev: any) => ({
-                      ...prev, // Sửa lỗi chính tả: license_Number -> licenseNumber
+                      ...prev,
                       licenseNumber: text,
                     }))
                   }
@@ -580,7 +599,7 @@ export default function ContractScreen() {
             </View>
           </View>
 
-          {/* VEHICLE INFORMATION SECTION */}
+          {/* VEHICLE INFORMATION  */}
           <View className="mb-8">
             <View className="flex-row items-center gap-2 mb-6">
               <Ionicons name="car-outline" size={24} color="#3B82F6" />
@@ -633,7 +652,7 @@ export default function ContractScreen() {
             </View>
           </View>
 
-          {/* CONTRACT SUMMARY SECTION */}
+          {/* CONTRACT SUMMARY */}
           <View className="mb-8 bg-white rounded-xl border border-gray-200 p-4">
             <View className="flex-row items-center gap-2 mb-6">
               <View className="w-6 h-6 rounded-full bg-green-100 items-center justify-center">
@@ -755,7 +774,7 @@ export default function ContractScreen() {
                   style={{ marginTop: 2 }}
                 />
                 <Text className="text-sm text-gray-700 flex-1 leading-5">
-                  Đặt cọc 30% giá tiền thuê xe
+                  Trả 100% giá tiền thuê xe
                 </Text>
               </View>
             </View>
